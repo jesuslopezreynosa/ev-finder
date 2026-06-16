@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watch, onMounted } from 'vue';
+import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount } from 'vue';
 
 export interface FilterState {
     manufacturer: string[];
@@ -43,6 +43,7 @@ interface BoundsProp {
 }
 
 type StringCategoryKey = 'manufacturer' | 'drivetrain' | 'sizeClass' | 'batteryChemistry' | 'chargingPort' | 'countryOfAssembly' | 'infotainmentOperatingSystem' | 'soundSystemBrand';
+type BooleanFilterKey = 'supportBatteryPreconditioning' | 'supportTeslaSupercharging' | 'supportIso15118' | 'supportPhoneAsAKey' | 'hasPoweredLiftgate' | 'supportOnePedalDrive' | 'hasAdaptiveCruiseControl' | 'hasGlassRoof' | 'supportsAppleCarPlay' | 'supportsAndroidAuto' | 'hasPoweredSeats' | 'hasVentilatedSeats' | 'hasHeatedSeats' | 'hasHeatedSteeringWheel' | 'hasHeatPump' | 'hasPoweredSideMirrors' | 'hasDashcam' | 'hasAutoDimmingMirrors';
 
 interface StringGroupConfig {
     title: string;
@@ -56,10 +57,12 @@ const props = defineProps<{
 }>();
 
 const emitChange = defineEmits<{
-    (e: 'filter-change', activeFilters: FilterState): void;
+    (e: 'filter-change', activeFilters: any): void;
 }>();
 
-// Initialize the values cleanly matching the default starting data parameters
+const dashboardRef = ref<HTMLElement | null>(null);
+const activePopoverKey = ref<string | null>(null);
+
 const yearMin = ref(props.bounds?.modelYear?.min ?? 2018);
 const rangeMin = ref(props.bounds?.rangeEpaCombined?.min ?? 0);
 const speedMin = ref(props.bounds?.chargingSpeedDc?.min ?? 0);
@@ -129,13 +132,80 @@ const booleanFilters = [
     { key: 'hasAutoDimmingMirrors', label: 'Auto-Dimming Mirrors' }
 ] as const;
 
+// Unifies both multi-select text filters and boolean feature toggles into uniform layout chips
+const activeChipsList = computed(() => {
+    const list: { type: 'string' | 'boolean'; categoryKey: string; displayValue: string; }[] = [];
+
+    // 1. Process String Arrays
+    const stringKeys = ['manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry', 'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'] as const;
+    stringKeys.forEach(key => {
+        if (Array.isArray(selectedFilters.value[key])) {
+            selectedFilters.value[key].forEach(val => {
+                list.push({ type: 'string', categoryKey: key, displayValue: val });
+            });
+        }
+    });
+
+    // 2. Process Feature Booleans
+    booleanFilters.forEach(f => {
+        const val = selectedFilters.value[f.key];
+        if (val !== null) {
+            list.push({
+                type: 'boolean',
+                categoryKey: f.key,
+                displayValue: `${f.label}: ${val ? 'Yes' : 'No'}`
+            });
+        }
+    });
+
+    return list;
+});
+
+const removeChip = (chip: { type: 'string' | 'boolean'; categoryKey: string; displayValue: string; }) => {
+    if (chip.type === 'string') {
+        const key = chip.categoryKey as StringCategoryKey;
+        selectedFilters.value[key] = selectedFilters.value[key].filter(item => item !== chip.displayValue);
+    } else {
+        const key = chip.categoryKey as BooleanFilterKey;
+        selectedFilters.value[key] = null;
+    }
+};
+
+const resetAllFilters = () => {
+    const keys = ['manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry', 'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'] as const;
+    keys.forEach(key => { selectedFilters.value[key] = []; });
+
+    booleanFilters.forEach(f => { selectedFilters.value[f.key] = null; });
+
+    if (props.bounds) {
+        yearMin.value = props.bounds.modelYear.min;
+        rangeMin.value = props.bounds.rangeEpaCombined.min;
+        speedMin.value = props.bounds.chargingSpeedDc.min;
+    }
+    syncAndEmit();
+};
+
+const togglePopover = (key: string) => {
+    activePopoverKey.value = activePopoverKey.value === key ? null : key;
+};
+
+const handleOutsideClick = (event: MouseEvent) => {
+    const targetNode = event.target as HTMLElement;
+    if (!targetNode) return;
+
+    if (targetNode.closest('.popover-dropdown-anchor') || targetNode.closest('.dropdown-popover-box') || targetNode.closest('.features-popover-grid')) {
+        return;
+    }
+    activePopoverKey.value = null;
+};
+
 const getPercent = (value: number, min: number, max: number): number => {
     if (max === min) return 100;
     return ((value - min) / (max - min)) * 100;
 };
 
 const syncAndEmit = () => {
-    const payload: FilterState = {
+    const payload = {
         ...structuredClone(toRaw(selectedFilters.value)),
         modelYear: { min: Number(yearMin.value), max: null },
         rangeEpaCombined: { min: Number(rangeMin.value), max: null },
@@ -144,8 +214,8 @@ const syncAndEmit = () => {
     emitChange('filter-change', payload);
 };
 
-// Set initial baseline numbers on lifecycle mounting to safely skip immediate watch conflicts
 onMounted(() => {
+    window.addEventListener('click', handleOutsideClick);
     if (props.bounds) {
         yearMin.value = props.bounds.modelYear.min;
         rangeMin.value = props.bounds.rangeEpaCombined.min;
@@ -154,7 +224,10 @@ onMounted(() => {
     syncAndEmit();
 });
 
-// Regular watch logic tracks active property payload adjustments stably
+onBeforeUnmount(() => {
+    window.removeEventListener('click', handleOutsideClick);
+});
+
 watch(() => props.bounds, (newBounds) => {
     if (!newBounds) return;
     yearMin.value = newBounds.modelYear.min;
@@ -163,155 +236,330 @@ watch(() => props.bounds, (newBounds) => {
     syncAndEmit();
 });
 
-watch(selectedFilters, () => {
-    syncAndEmit();
-}, { deep: true });
+watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
 </script>
 
 <template>
-    <div class="filter-dashboard">
-        <h3>Filters</h3>
+    <div class="compact-filter-dashboard" ref="dashboardRef">
+        <div class="filter-header">
+            <h3>Refine Fleet Vehicles</h3>
+            <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
+        </div>
 
-        <section class="filter-section numeric-ranges">
-            <div class="range-group">
-                <label>Model Year: <strong>{{ yearMin }}</strong></label>
-                <div class="slider-container">
-                    <input type="range" :min="bounds.modelYear.min" :max="bounds.modelYear.max" step="1"
-                        v-model.number="yearMin" @input="syncAndEmit" :style="{
-                            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e5e7eb ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e5e7eb 100%)`
-                        }" />
-                </div>
+        <div v-if="activeChipsList.length" class="active-chips-line">
+            <div v-for="chip in activeChipsList" :key="chip.displayValue" class="filter-chip">
+                <span class="chip-content">{{ chip.displayValue }}</span>
+                <button class="chip-remove-x" @click="removeChip(chip)">&times;</button>
             </div>
+        </div>
 
-            <div class="range-group">
-                <label>EPA Range: <strong>{{ rangeMin }} mi</strong></label>
-                <div class="slider-container">
-                    <input type="range" :min="bounds.rangeEpaCombined.min" :max="bounds.rangeEpaCombined.max" step="10"
-                        v-model.number="rangeMin" @input="syncAndEmit" :style="{
-                            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e5e7eb ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e5e7eb 100%)`
-                        }" />
-                </div>
+        <div class="filter-row sliders-row">
+            <div class="compact-range-group">
+                <span class="range-meta-label">Year: <strong>{{ yearMin }}</strong></span>
+                <input type="range" :min="bounds.modelYear.min" :max="bounds.modelYear.max" step="1"
+                    v-model.number="yearMin" @input="syncAndEmit"
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 100%)` }" />
             </div>
-
-            <div class="range-group">
-                <label>DC Charge Speed: <strong>{{ speedMin }} kW</strong></label>
-                <div class="slider-container">
-                    <input type="range" :min="bounds.chargingSpeedDc.min" :max="bounds.chargingSpeedDc.max" step="25"
-                        v-model.number="speedMin" @input="syncAndEmit" :style="{
-                            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e5e7eb ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e5e7eb 100%)`
-                        }" />
-                </div>
+            <div class="compact-range-group">
+                <span class="range-meta-label">Min EPA Range: <strong>{{ rangeMin }} mi</strong></span>
+                <input type="range" :min="bounds.rangeEpaCombined.min" :max="bounds.rangeEpaCombined.max" step="10"
+                    v-model.number="rangeMin" @input="syncAndEmit"
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 100%)` }" />
             </div>
-        </section>
+            <div class="compact-range-group">
+                <span class="range-meta-label">DC Charge: <strong>{{ speedMin }} kW</strong></span>
+                <input type="range" :min="bounds.chargingSpeedDc.min" :max="bounds.chargingSpeedDc.max" step="25"
+                    v-model.number="speedMin" @input="syncAndEmit"
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 100%)` }" />
+            </div>
+        </div>
 
-        <section class="filter-section multi-selects">
-            <div v-for="group in stringFilterGroups" :key="group.key" class="filter-card">
-                <h4>{{ group.title }}</h4>
-                <div class="scroll-box">
-                    <label v-for="option in group.choices" :key="option">
+        <div class="filter-row dropdowns-row">
+            <div v-for="group in stringFilterGroups" :key="group.key" class="popover-dropdown-anchor">
+                <button class="dropdown-trigger-btn"
+                    :class="{ 'has-active-selections': selectedFilters[group.key]?.length }"
+                    @click="togglePopover(group.key)">
+                    {{ group.title }}
+                    <span v-if="selectedFilters[group.key]?.length" class="counter-badge">{{
+                        selectedFilters[group.key].length }}</span>
+                </button>
+                <div v-if="activePopoverKey === group.key" class="dropdown-popover-box">
+                    <label v-for="option in group.choices" :key="option" class="popover-checkbox-item">
                         <input type="checkbox" :value="option" v-model="selectedFilters[group.key]" />
-                        {{ option }}
+                        <span>{{ option }}</span>
                     </label>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section class="filter-section feature-toggles">
-            <h4>Vehicle Features</h4>
-            <div class="toggle-grid">
-                <div v-for="feature in booleanFilters" :key="feature.key" class="toggle-item">
-                    <span>{{ feature.label }}</span>
-                    <select v-model="selectedFilters[feature.key]">
-                        <option :value="null">Any</option>
-                        <option :value="true">Yes</option>
-                        <option :value="false">No</option>
-                    </select>
+        <div class="filter-row features-row">
+            <div class="popover-dropdown-anchor full-width-anchor">
+                <button class="dropdown-trigger-btn features-trigger-btn"
+                    @click="togglePopover('features_panel')">Toggle Vehicle Features & Options</button>
+                <div v-if="activePopoverKey === 'features_panel'" class="features-popover-grid">
+                    <div v-for="feature in booleanFilters" :key="feature.key" class="feature-toggle-pill">
+                        <span class="feature-pill-title">{{ feature.label }}</span>
+                        <select v-model="selectedFilters[feature.key]" class="feature-select-box">
+                            <option :value="null">Any</option>
+                            <option :value="true">Yes</option>
+                            <option :value="false">No</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-        </section>
+        </div>
     </div>
 </template>
 
 <style scoped>
-.filter-dashboard {
-    background: #f8f9fa;
-    padding: 20px;
+.compact-filter-dashboard {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    border: 1px solid #e9ecef;
-    margin-bottom: 24px;
+    padding: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.filter-section {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #dee2e6;
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.numeric-ranges {
+.filter-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.reset-filters-action-btn {
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.reset-filters-action-btn:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.active-chips-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.filter-chip {
+    display: flex;
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.chip-remove-x {
+    background: transparent;
+    border: none;
+    color: #1e40af;
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    font-weight: 700;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sliders-row {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 8px;
+    gap: 16px;
 }
 
-.range-group {
+.compact-range-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.range-group input[type="range"] {
+.range-meta-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.compact-range-group input[type="range"] {
     width: 100%;
-    margin: 0;
-    padding: 0;
     cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
-    height: 6px;
-    border-radius: 3px;
+    height: 4px;
+    border-radius: 2px;
 }
 
-.range-group input[type="range"]::-webkit-slider-thumb {
+.compact-range-group input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: #3b82f6;
-    cursor: pointer;
+    background: #2563eb;
 }
 
-.multi-selects {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 16px;
+.dropdowns-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.filter-card h4 {
-    margin: 0 0 8px 0;
-    font-size: 14px;
+.popover-dropdown-anchor {
+    position: relative;
 }
 
-.scroll-box {
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.scroll-box label {
-    display: block;
-    margin: 4px 0;
+.dropdown-trigger-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-radius: 6px;
     font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
 }
 
-.toggle-grid {
+.dropdown-trigger-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.dropdown-trigger-btn.has-active-selections {
+    border-color: #2563eb;
+    background: #f0f5ff;
+    color: #1d4ed8;
+}
+
+.counter-badge {
+    background: #2563eb;
+    color: white;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.dropdown-popover-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.popover-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #334155;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.popover-checkbox-item:hover {
+    background: #f1f5f9;
+}
+
+.full-width-anchor {
+    width: 100%;
+}
+
+.features-trigger-btn {
+    width: 100%;
+    justify-content: center;
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+.features-popover-grid {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 6px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    z-index: 90;
 }
 
-.toggle-item {
+.feature-toggle-pill {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.feature-pill-title {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.feature-select-box {
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    background: white;
 }
 </style>
