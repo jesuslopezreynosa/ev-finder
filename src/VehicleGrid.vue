@@ -8,6 +8,8 @@ import GridFilter, { type FilterState } from './GridFilter.vue';
 // Setup `i18n-iso-countries`
 countries.registerLocale(enLocale);
 
+const baseUrl = import.meta.env.BASE_URL;
+
 const props = defineProps<{
     vehicles: any[];
 }>();
@@ -40,7 +42,7 @@ const getChargingPortIconUrl = (portName: string): string => {
     if (!portName) return '';
     const filename = portName.toLowerCase().replace(/[\s-]/g, '');
     // Points directly to public/icons/filename.svg
-    return `/icons/${filename}.svg`;
+    return `${ baseUrl }/icons/${ filename }.svg`;
 };
 
 const dynamicFilterOptions = computed(() => {
