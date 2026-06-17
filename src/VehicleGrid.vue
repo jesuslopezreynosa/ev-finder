@@ -1,27 +1,46 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import countries from 'i18n-iso-countries';
+import enLocale from 'i18n-iso-countries/langs/en.json';
+
 import GridFilter, { type FilterState } from './GridFilter.vue';
+
+// Setup `i18n-iso-countries`
+countries.registerLocale(enLocale);
 
 const props = defineProps<{
     vehicles: any[];
 }>();
 
-// Resolves 3-letter ISO codes natively to English names without hardcoded lists
-const getFullRegionName = (alpha3: string): string => {
-    if (!alpha3) return '';
-    const cleaned = String(alpha3).trim().toUpperCase();
+// Return Country's Full Name from ISO Alpha-3 code
+const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
+    if (!alpha3Code) return '';
+    const cleaned = String(alpha3Code).trim().toUpperCase();
 
     try {
-        // Feed the three-letter code as an undetermined primary language subtag layout
-        const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
-        const resolvedName = regionNames.of(cleaned);
-        if (resolvedName && resolvedName !== cleaned) {
-            return resolvedName;
-        }
+        return countries.getName(alpha3Code, 'en') || cleaned;
     } catch (e) {
         console.error('Intl.DisplayNames matching failed:', cleaned, e);
     }
+
     return cleaned;
+};
+
+// Converts the charging port name into an normalized array
+const getChargingPortsArray = (portValue: any): string[] => {
+    if (!portValue) return [];
+    if (Array.isArray(portValue)) {
+        return portValue.map(p => String(p).trim());
+    }
+    return [String(portValue).trim()];
+};
+
+// Generates absolute paths from the public folder
+const getChargingPortIconUrl = (portName: string): string => {
+    if (!portName) return '';
+    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
+    // Points directly to public/icons/filename.svg
+    return `/icons/${filename}.svg`;
 };
 
 const dynamicFilterOptions = computed(() => {
@@ -44,7 +63,7 @@ const dynamicFilterOptions = computed(() => {
                     if (item) uniqueVals.add(String(item).trim());
                 });
             } else if (key === 'countryOfAssembly') {
-                const fullCountryName = getFullRegionName(String(val));
+                const fullCountryName = getCountryNameFromIsoAlphaThreeCode(String(val));
                 if (fullCountryName) {
                     uniqueVals.add(fullCountryName);
                 }
@@ -70,12 +89,12 @@ const dataBounds = computed(() => {
             max: years.length ? Math.max(...years) : ((new Date()).getFullYear() + 1)
         },
         rangeEpaCombined: {
-            min: ranges.length ? Math.min(...ranges) : 0,
-            max: ranges.length ? Math.max(...ranges) : 500
+            min: ranges.length ? Math.max(0, Math.min(...ranges)) : 0,
+            max: ranges.length ? Math.max(0, Math.max(...ranges)) : 500
         },
         chargingSpeedDc: {
-            min: speeds.length ? Math.min(...speeds) : 0,
-            max: speeds.length ? Math.max(...speeds) : 350
+            min: speeds.length ? Math.max(0, Math.min(...speeds)) : 0,
+            max: speeds.length ? Math.max(0, Math.max(...speeds)) : 350
         }
     };
 });
@@ -101,7 +120,7 @@ const formatDisplaySpecs = (vehicle: any) => {
             let displayValue = value;
 
             if (key === 'countryOfAssembly') {
-                displayValue = getFullRegionName(String(value));
+                displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
             } else if (Array.isArray(value)) {
                 displayValue = value.join(', ');
             }
@@ -128,7 +147,7 @@ const filteredVehicles = computed(() => {
             if (Array.isArray(rawValue)) {
                 targetValues = rawValue.map(v => String(v).trim());
             } else if (key === 'countryOfAssembly') {
-                targetValues = [getFullRegionName(String(rawValue))];
+                targetValues = [getCountryNameFromIsoAlphaThreeCode(String(rawValue))];
             } else {
                 targetValues = [String(rawValue).trim()];
             }
@@ -188,12 +207,27 @@ const filteredVehicles = computed(() => {
                 <div class="card-main-meta">
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                     <p class="trim-drivetrain-line">
-                        <strong>Trim:</strong> {{ vehicle.trim }} <span class="drivetrain-pill">{{ vehicle.drivetrain
-                            }}</span>
+                        <strong>{{ vehicle.trim }}</strong>
+                        <span class="drivetrain-pill">{{ vehicle.drivetrain }}</span>
+                        <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
+                            <span class="battery-pill">{{ vehicle.batteryCapacityNet }} kWh</span>
+                        </span>
                     </p>
                     <p class="specs-preview-summary">
-                        {{ vehicle.sizeClass }} &bull; {{ vehicle.rangeEpaCombined }} mi range &bull; {{
-                            Array.isArray(vehicle.chargingPort) ? vehicle.chargingPort.join(' & ') : vehicle.chargingPort }}
+                        <span>{{ vehicle.sizeClass }}</span>
+                        <span class="summary-bullet">&bull;</span>
+                        <span>{{ vehicle.rangeEpaCombined }} mi range</span>
+                        <span class="summary-bullet">&bull;</span>
+                        <span class="inline-charger-container">
+                            <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPort)" :key="port"
+                                class="inline-charger-item">
+                                <span :data-tooltip="port" class="tooltip-wrapper">
+                                    <img :src="getChargingPortIconUrl(port)" :alt="port" class="charger-inline-icon" />
+                                </span>
+                                <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPort).length - 1"
+                                    class="charger-separator">&amp;</span>
+                            </span>
+                        </span>
                     </p>
                 </div>
 
@@ -272,10 +306,61 @@ const filteredVehicles = computed(() => {
     font-weight: 700;
 }
 
+.battery-pill {
+    background: #f0fdf4;
+    color: #166534;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: help;
+}
+
 .specs-preview-summary {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     font-size: 13px;
     color: #64748b;
     margin: 0;
+    line-height: 1.2;
+}
+
+.summary-bullet {
+    user-select: none;
+}
+
+.inline-charger-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inline-charger-item {
+    display: inline-flex;
+    align-items: center;
+}
+
+.charger-inline-icon {
+    height: 28px;
+    width: auto;
+    display: inline-block;
+    object-fit: contain;
+    cursor: help;
+    transition: transform 0.1s ease;
+}
+
+.charger-inline-icon:hover {
+    transform: scale(1.08);
+}
+
+.charger-separator {
+    font-size: 14px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-left: 6px;
+    user-select: none;
 }
 
 .specs-expanded-drawer {
@@ -305,6 +390,7 @@ const filteredVehicles = computed(() => {
 .spec-matrix-row {
     display: flex;
     justify-content: space-between;
+    align-items: flex-end;
     font-size: 13px;
     border-bottom: 1px dashed #e2e8f0;
     padding-bottom: 4px;
@@ -313,11 +399,15 @@ const filteredVehicles = computed(() => {
 .spec-label {
     color: #64748b;
     font-weight: 500;
+    padding-right: 8px;
+    text-align: left;
 }
 
 .spec-value {
     color: #0f172a;
     font-weight: 600;
+    text-align: right;
+    word-break: break-word;
 }
 
 .no-results {
@@ -325,5 +415,49 @@ const filteredVehicles = computed(() => {
     text-align: center;
     padding: 60px;
     color: #64748b;
+}
+
+.tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tooltip-wrapper::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1e293b;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-wrapper::before {
+    content: '';
+    position: absolute;
+    bottom: 105%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1e293b transparent transparent transparent;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.tooltip-wrapper:hover::after,
+.tooltip-wrapper:hover::before {
+    opacity: 1;
 }
 </style>

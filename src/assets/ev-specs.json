@@ -1603,10 +1603,7 @@
     "modelYear": 2024,
     "manufacturer": "Hyundai",
     "model": "IONIQ 5",
-    "trim": [
-      "SE",
-      "Standard Range"
-    ],
+    "trim": "SE Standard Range",
     "drivetrain": "RWD",
     "sizeClass": "SUV",
     "rangeEpaCombined": 220,
@@ -2012,10 +2009,7 @@
     "modelYear": 2026,
     "manufacturer": "Hyundai",
     "model": "IONIQ 5",
-    "trim": [
-      "SE",
-      "Standard Range"
-    ],
+    "trim": "SE Standard Range",
     "drivetrain": "RWD",
     "sizeClass": "SUV",
     "rangeEpaCombined": 245,

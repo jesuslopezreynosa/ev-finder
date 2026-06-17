@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "i18n-iso-countries": "^7.14.0",
     "vue": "^3.5.32"
   },
   "devDependencies": {

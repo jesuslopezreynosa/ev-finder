@@ -35,21 +35,25 @@ export interface FilterState {
     hasAutoDimmingMirrors: boolean | null;
 }
 
-interface RangeBounds { min: number; max: number; }
+interface RangeBounds {
+    min: number;
+    max: number;
+}
+
 interface BoundsProp {
     modelYear: RangeBounds;
     rangeEpaCombined: RangeBounds;
     chargingSpeedDc: RangeBounds;
 }
 
-type StringCategoryKey = 'manufacturer' | 'drivetrain' | 'sizeClass' | 'batteryChemistry' | 'chargingPort' | 'countryOfAssembly' | 'infotainmentOperatingSystem' | 'soundSystemBrand';
-type BooleanFilterKey = 'supportBatteryPreconditioning' | 'supportTeslaSupercharging' | 'supportIso15118' | 'supportPhoneAsAKey' | 'hasPoweredLiftgate' | 'supportOnePedalDrive' | 'hasAdaptiveCruiseControl' | 'hasGlassRoof' | 'supportsAppleCarPlay' | 'supportsAndroidAuto' | 'hasPoweredSeats' | 'hasVentilatedSeats' | 'hasHeatedSeats' | 'hasHeatedSteeringWheel' | 'hasHeatPump' | 'hasPoweredSideMirrors' | 'hasDashcam' | 'hasAutoDimmingMirrors';
-
 interface StringGroupConfig {
     title: string;
     key: StringCategoryKey;
     choices: string[];
 }
+
+type StringCategoryKey = 'manufacturer' | 'drivetrain' | 'sizeClass' | 'batteryChemistry' | 'chargingPort' | 'countryOfAssembly' | 'infotainmentOperatingSystem' | 'soundSystemBrand';
+type BooleanFilterKey = 'supportBatteryPreconditioning' | 'supportTeslaSupercharging' | 'supportIso15118' | 'supportPhoneAsAKey' | 'hasPoweredLiftgate' | 'supportOnePedalDrive' | 'hasAdaptiveCruiseControl' | 'hasGlassRoof' | 'supportsAppleCarPlay' | 'supportsAndroidAuto' | 'hasPoweredSeats' | 'hasVentilatedSeats' | 'hasHeatedSeats' | 'hasHeatedSteeringWheel' | 'hasHeatPump' | 'hasPoweredSideMirrors' | 'hasDashcam' | 'hasAutoDimmingMirrors';
 
 const props = defineProps<{
     bounds: BoundsProp;
@@ -60,7 +64,6 @@ const emitChange = defineEmits<{
     (e: 'filter-change', activeFilters: any): void;
 }>();
 
-const dashboardRef = ref<HTMLElement | null>(null);
 const activePopoverKey = ref<string | null>(null);
 
 const yearMin = ref(props.bounds?.modelYear?.min ?? 2018);
@@ -97,19 +100,16 @@ const selectedFilters = ref({
     hasAutoDimmingMirrors: null as boolean | null
 });
 
-const stringFilterGroups = computed(() => {
-    const configurations: StringGroupConfig[] = [
-        { title: 'Manufacturer', key: 'manufacturer', choices: props.options.manufacturer || [] },
-        { title: 'Drivetrain', key: 'drivetrain', choices: props.options.drivetrain || [] },
-        { title: 'Size Class', key: 'sizeClass', choices: props.options.sizeClass || [] },
-        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: props.options.batteryChemistry || [] },
-        { title: 'Charging Port', key: 'chargingPort', choices: props.options.chargingPort || [] },
-        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: props.options.countryOfAssembly || [] },
-        { title: 'Operating System', key: 'infotainmentOperatingSystem', choices: props.options.infotainmentOperatingSystem || [] },
-        { title: 'Sound Brand', key: 'soundSystemBrand', choices: props.options.soundSystemBrand || [] }
-    ];
-    return configurations;
-});
+const stringFilterGroups = computed((): StringGroupConfig[] => [
+    { title: 'Manufacturer', key: 'manufacturer', choices: props.options.manufacturer || [] },
+    { title: 'Drivetrain', key: 'drivetrain', choices: props.options.drivetrain || [] },
+    { title: 'Size Class', key: 'sizeClass', choices: props.options.sizeClass || [] },
+    { title: 'Battery Chemistry', key: 'batteryChemistry', choices: props.options.batteryChemistry || [] },
+    { title: 'Charging Port', key: 'chargingPort', choices: props.options.chargingPort || [] },
+    { title: 'Country of Assembly', key: 'countryOfAssembly', choices: props.options.countryOfAssembly || [] },
+    { title: 'Operating System', key: 'infotainmentOperatingSystem', choices: props.options.infotainmentOperatingSystem || [] },
+    { title: 'Sound Brand', key: 'soundSystemBrand', choices: props.options.soundSystemBrand || [] }
+]);
 
 const booleanFilters = [
     { key: 'supportBatteryPreconditioning', label: 'Battery Preconditioning' },
@@ -132,21 +132,18 @@ const booleanFilters = [
     { key: 'hasAutoDimmingMirrors', label: 'Auto-Dimming Mirrors' }
 ] as const;
 
-// Unifies both multi-select text filters and boolean feature toggles into uniform layout chips
 const activeChipsList = computed(() => {
     const list: { type: 'string' | 'boolean'; categoryKey: string; displayValue: string; }[] = [];
 
-    // 1. Process String Arrays
-    const stringKeys = ['manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry', 'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'] as const;
-    stringKeys.forEach(key => {
-        if (Array.isArray(selectedFilters.value[key])) {
-            selectedFilters.value[key].forEach(val => {
-                list.push({ type: 'string', categoryKey: key, displayValue: val });
+    stringFilterGroups.value.forEach(group => {
+        const value = selectedFilters.value[group.key];
+        if (Array.isArray(value)) {
+            value.forEach(val => {
+                list.push({ type: 'string', categoryKey: group.key, displayValue: val });
             });
         }
     });
 
-    // 2. Process Feature Booleans
     booleanFilters.forEach(f => {
         const val = selectedFilters.value[f.key];
         if (val !== null) {
@@ -171,10 +168,18 @@ const removeChip = (chip: { type: 'string' | 'boolean'; categoryKey: string; dis
     }
 };
 
-const resetAllFilters = () => {
-    const keys = ['manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry', 'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'] as const;
-    keys.forEach(key => { selectedFilters.value[key] = []; });
+const syncAndEmit = () => {
+    const payload = {
+        ...structuredClone(toRaw(selectedFilters.value)),
+        modelYear: { min: Number(yearMin.value), max: null },
+        rangeEpaCombined: { min: Number(rangeMin.value), max: null },
+        chargingSpeedDc: { min: Number(speedMin.value), max: null }
+    };
+    emitChange('filter-change', payload);
+};
 
+const resetAllFilters = () => {
+    stringFilterGroups.value.forEach(group => { selectedFilters.value[group.key] = []; });
     booleanFilters.forEach(f => { selectedFilters.value[f.key] = null; });
 
     if (props.bounds) {
@@ -204,23 +209,16 @@ const getPercent = (value: number, min: number, max: number): number => {
     return ((value - min) / (max - min)) * 100;
 };
 
-const syncAndEmit = () => {
-    const payload = {
-        ...structuredClone(toRaw(selectedFilters.value)),
-        modelYear: { min: Number(yearMin.value), max: null },
-        rangeEpaCombined: { min: Number(rangeMin.value), max: null },
-        chargingSpeedDc: { min: Number(speedMin.value), max: null }
-    };
-    emitChange('filter-change', payload);
+const applyBounds = (boundsSource: BoundsProp) => {
+    if (!boundsSource) return;
+    yearMin.value = boundsSource.modelYear.min;
+    rangeMin.value = boundsSource.rangeEpaCombined.min;
+    speedMin.value = boundsSource.chargingSpeedDc.min;
 };
 
 onMounted(() => {
     window.addEventListener('click', handleOutsideClick);
-    if (props.bounds) {
-        yearMin.value = props.bounds.modelYear.min;
-        rangeMin.value = props.bounds.rangeEpaCombined.min;
-        speedMin.value = props.bounds.chargingSpeedDc.min;
-    }
+    applyBounds(props.bounds);
     syncAndEmit();
 });
 
@@ -230,9 +228,7 @@ onBeforeUnmount(() => {
 
 watch(() => props.bounds, (newBounds) => {
     if (!newBounds) return;
-    yearMin.value = newBounds.modelYear.min;
-    rangeMin.value = newBounds.rangeEpaCombined.min;
-    speedMin.value = newBounds.chargingSpeedDc.min;
+    applyBounds(newBounds);
     syncAndEmit();
 });
 
@@ -240,22 +236,22 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
 </script>
 
 <template>
-    <div class="compact-filter-dashboard" ref="dashboardRef">
+    <div class="compact-filter-dashboard">
         <div class="filter-header">
-            <h3>Refine Fleet Vehicles</h3>
+            <h3>Filter Vehicles</h3>
             <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
         </div>
 
         <div v-if="activeChipsList.length" class="active-chips-line">
             <div v-for="chip in activeChipsList" :key="chip.displayValue" class="filter-chip">
-                <span class="chip-content">{{ chip.displayValue }}</span>
+                <span>{{ chip.displayValue }}</span>
                 <button class="chip-remove-x" @click="removeChip(chip)">&times;</button>
             </div>
         </div>
 
-        <div class="filter-row sliders-row">
+        <div class="sliders-row">
             <div class="compact-range-group">
-                <span class="range-meta-label">Year: <strong>{{ yearMin }}</strong></span>
+                <span class="range-meta-label">Min Year: <strong>{{ yearMin }}</strong></span>
                 <input type="range" :min="bounds.modelYear.min" :max="bounds.modelYear.max" step="1"
                     v-model.number="yearMin" @input="syncAndEmit"
                     :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 100%)` }" />
@@ -267,14 +263,14 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
                     :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 100%)` }" />
             </div>
             <div class="compact-range-group">
-                <span class="range-meta-label">DC Charge: <strong>{{ speedMin }} kW</strong></span>
+                <span class="range-meta-label">Min DC Charge: <strong>{{ speedMin }} kW</strong></span>
                 <input type="range" :min="bounds.chargingSpeedDc.min" :max="bounds.chargingSpeedDc.max" step="25"
                     v-model.number="speedMin" @input="syncAndEmit"
                     :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 100%)` }" />
             </div>
         </div>
 
-        <div class="filter-row dropdowns-row">
+        <div class="dropdowns-row">
             <div v-for="group in stringFilterGroups" :key="group.key" class="popover-dropdown-anchor">
                 <button class="dropdown-trigger-btn"
                     :class="{ 'has-active-selections': selectedFilters[group.key]?.length }"
@@ -292,7 +288,7 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
             </div>
         </div>
 
-        <div class="filter-row features-row">
+        <div class="features-row">
             <div class="popover-dropdown-anchor full-width-anchor">
                 <button class="dropdown-trigger-btn features-trigger-btn"
                     @click="togglePopover('features_panel')">Toggle Vehicle Features & Options</button>
@@ -387,12 +383,6 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     font-weight: 700;
 }
 
-.filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
 .sliders-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -432,7 +422,8 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     background: #2563eb;
 }
 
-.dropdowns-row {
+.dropdowns-row,
+.features-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
