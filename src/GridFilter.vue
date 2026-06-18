@@ -10,11 +10,9 @@ export interface FilterState {
     countryOfAssembly: string[];
     infotainmentOs: string[];
     soundSystemBrand: string[];
-
     modelYear: { min: number; max: number | null; };
     epaCombinedRangeMi: { min: number; max: number | null; };
     dcChargingSpeedKw: { min: number; max: number | null; };
-
     supportBatteryPreconditioning: boolean | null;
     supportTeslaSupercharging: boolean | null;
     supportIso15118: boolean | null;
@@ -128,7 +126,6 @@ const selectedFilters = ref({
     countryOfAssembly: [] as string[],
     infotainmentOs: [] as string[],
     soundSystemBrand: [] as string[],
-
     supportBatteryPreconditioning: null as boolean | null,
     supportTeslaSupercharging: null as boolean | null,
     supportIso15118: null as boolean | null,
@@ -170,20 +167,20 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
 
     return [
         { title: 'Manufacturer', key: 'manufacturer', choices: normalizeChoices(props.options.manufacturer) },
-        { title: 'Drivetrain', key: 'driveAxle', choices: normalizeChoices(props.options.driveAxle) },
-        { title: 'Size Class', key: 'vehicleType', choices: normalizeChoices(props.options.vehicleType) },
+        { title: 'Drive Axle', key: 'driveAxle', choices: normalizeChoices(props.options.driveAxle) },
+        { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeChoices(props.options.vehicleType) },
         { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeChoices(props.options.batteryChemistry) },
-        { title: 'Charging Port', key: 'chargingPorts', choices: normalizeChoices(portsChoices) },
+        { title: 'Charge Port', key: 'chargingPorts', choices: normalizeChoices(portsChoices) },
         { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeChoices(props.options.countryOfAssembly) },
-        { title: 'Operating System', key: 'infotainmentOs', choices: normalizeChoices(infoOsChoices) },
-        { title: 'Sound Brand', key: 'soundSystemBrand', choices: normalizeChoices(props.options.soundSystemBrand) }
+        { title: 'Infotainment OS', key: 'infotainmentOs', choices: normalizeChoices(infoOsChoices) },
+        { title: 'Sound System Brand', key: 'soundSystemBrand', choices: normalizeChoices(props.options.soundSystemBrand) }
     ];
 });
 
 const booleanFilters = [
     { key: 'supportBatteryPreconditioning', label: 'Battery Preconditioning' },
     { key: 'supportTeslaSupercharging', label: 'Tesla Supercharging' },
-    { key: 'supportIso15118', label: 'ISO 15118 (Plug & Charge)' },
+    { key: 'supportIso15118', label: 'Plug & Charge (ISO 15118)' },
     { key: 'supportsPhoneAsAKey', label: 'Phone as a Key' },
     { key: 'hasPoweredLiftgate', label: 'Powered Liftgate' },
     { key: 'hasOnePedalDrive', label: 'One-Pedal Drive' },
@@ -752,7 +749,6 @@ html.dark .feature-select-box {
     color: #ffffff;
 }
 
-/* --- COMPACT ACTION BUTTONS (THEME TOGGLE + RESET) --- */
 .filter-actions-group {
     display: flex;
     align-items: center;
@@ -783,7 +779,6 @@ html.dark .feature-select-box {
     border-color: #94a3b8;
 }
 
-/* Dark Mode Overrides */
 html.dark .theme-toggle-btn,
 html.dark .reset-filters-action-btn {
     background-color: #0f172a;

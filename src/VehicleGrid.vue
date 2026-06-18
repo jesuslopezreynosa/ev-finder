@@ -232,7 +232,8 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 'KW': '(kW)',
                 'MI': '(mi)',
                 'IN': '(in)',
-                'L': '(L)'
+                'L': '(L)',
+                'Percent': '%'
             };
 
             for (const [rawTarget, formattedValue] of Object.entries(unitReplacements)) {
@@ -248,7 +249,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             label = label.replace(/\s+/g, ' ').trim();
 
             let displayValue = value;
-            if (key === 'countryOfAssembly') {
+            if (['countryOfAssembly', 'market'].includes(key)) {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
             } else if (Array.isArray(value)) {
                 displayValue = value.join(', ');
@@ -723,9 +724,6 @@ html.dark .spec-value {
     color: #64748b;
 }
 
-/* ==========================================
-   INVERT HOVER TOOLTIPS FOR BATTERY/PLUGS
-   ========================================== */
 .tooltip-wrapper {
     position: relative;
     display: inline-flex;

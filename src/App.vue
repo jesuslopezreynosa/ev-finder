@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import VehicleGrid from './VehicleGrid.vue';
+import { onMounted, ref } from 'vue';
+
 import EvData from '@/assets/ev-specs.json';
+
+import VehicleGrid from './VehicleGrid.vue';
+import Header from './Header.vue';
+import ArticleView from './ArticleView.vue';
+
+// Track which layout or article is currently active
+const currentView = ref<string>('grid');
+
+function setView(viewName: string): void {
+  currentView.value = viewName;
+}
 
 onMounted(() => {
   const isDark = localStorage.getItem('theme') === 'dark' ||
@@ -16,7 +27,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <VehicleGrid :vehicles="EvData" />
+  <Header :active-view="currentView" @change-view="setView" />
+
+  <VehicleGrid v-if="currentView === 'grid'" :vehicles="EvData" />
+
+  <ArticleView v-else :title="currentView" />
 </template>
 
 <style>
