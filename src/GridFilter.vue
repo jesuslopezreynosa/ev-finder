@@ -3,28 +3,27 @@ import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount } from 'vue';
 
 export interface FilterState {
     manufacturer: string[];
-    drivetrain: string[];
-    sizeClass: string[];
+    driveAxle: string[];
+    vehicleType: string[];
     batteryChemistry: string[];
-    chargingPort: string[];
+    chargingPorts: string[];
     countryOfAssembly: string[];
     infotainmentOperatingSystem: string[];
     soundSystemBrand: string[];
 
     modelYear: { min: number; max: number | null; };
-    rangeEpaCombined: { min: number; max: number | null; };
-    chargingSpeedDc: { min: number; max: number | null; };
+    epaCombinedRangeMi: { min: number; max: number | null; };
+    dcChargingSpeedKw: { min: number; max: number | null; };
 
     supportBatteryPreconditioning: boolean | null;
     supportTeslaSupercharging: boolean | null;
     supportIso15118: boolean | null;
-    supportPhoneAsAKey: boolean | null;
+    supportsPhoneAsAKey: boolean | null;
     hasPoweredLiftgate: boolean | null;
-    supportOnePedalDrive: boolean | null;
+    hasOnePedalDrive: boolean | null;
     hasAdaptiveCruiseControl: boolean | null;
     hasGlassRoof: boolean | null;
-    supportsAppleCarPlay: boolean | null;
-    supportsAndroidAuto: boolean | null;
+    supportsCarPlayAndroidAuto: boolean | null;
     hasPoweredSeats: boolean | null;
     hasVentilatedSeats: boolean | null;
     hasHeatedSeats: boolean | null;
@@ -42,8 +41,8 @@ interface RangeBounds {
 
 interface BoundsProp {
     modelYear: RangeBounds;
-    rangeEpaCombined: RangeBounds;
-    chargingSpeedDc: RangeBounds;
+    epaCombinedRangeMi: RangeBounds;
+    dcChargingSpeedKw: RangeBounds;
 }
 
 interface StringGroupConfig {
@@ -52,8 +51,34 @@ interface StringGroupConfig {
     choices: string[];
 }
 
-type StringCategoryKey = 'manufacturer' | 'drivetrain' | 'sizeClass' | 'batteryChemistry' | 'chargingPort' | 'countryOfAssembly' | 'infotainmentOperatingSystem' | 'soundSystemBrand';
-type BooleanFilterKey = 'supportBatteryPreconditioning' | 'supportTeslaSupercharging' | 'supportIso15118' | 'supportPhoneAsAKey' | 'hasPoweredLiftgate' | 'supportOnePedalDrive' | 'hasAdaptiveCruiseControl' | 'hasGlassRoof' | 'supportsAppleCarPlay' | 'supportsAndroidAuto' | 'hasPoweredSeats' | 'hasVentilatedSeats' | 'hasHeatedSeats' | 'hasHeatedSteeringWheel' | 'hasHeatPump' | 'hasPoweredSideMirrors' | 'hasDashcam' | 'hasAutoDimmingMirrors';
+type StringCategoryKey =
+    | 'manufacturer'
+    | 'driveAxle'
+    | 'vehicleType'
+    | 'batteryChemistry'
+    | 'chargingPorts'
+    | 'countryOfAssembly'
+    | 'infotainmentOperatingSystem'
+    | 'soundSystemBrand';
+
+type BooleanFilterKey =
+    | 'supportBatteryPreconditioning'
+    | 'supportTeslaSupercharging'
+    | 'supportIso15118'
+    | 'supportsPhoneAsAKey'
+    | 'hasPoweredLiftgate'
+    | 'hasOnePedalDrive'
+    | 'hasAdaptiveCruiseControl'
+    | 'hasGlassRoof'
+    | 'supportsCarPlayAndroidAuto'
+    | 'hasPoweredSeats'
+    | 'hasVentilatedSeats'
+    | 'hasHeatedSeats'
+    | 'hasHeatedSteeringWheel'
+    | 'hasHeatPump'
+    | 'hasPoweredSideMirrors'
+    | 'hasDashcam'
+    | 'hasAutoDimmingMirrors';
 
 const props = defineProps<{
     bounds: BoundsProp;
@@ -61,21 +86,21 @@ const props = defineProps<{
 }>();
 
 const emitChange = defineEmits<{
-    (e: 'filter-change', activeFilters: any): void;
+    (e: 'filter-change', activeFilters: FilterState): void;
 }>();
 
 const activePopoverKey = ref<string | null>(null);
 
-const yearMin = ref(props.bounds?.modelYear?.min ?? 2018);
-const rangeMin = ref(props.bounds?.rangeEpaCombined?.min ?? 0);
-const speedMin = ref(props.bounds?.chargingSpeedDc?.min ?? 0);
+const yearMin = ref<number>(props.bounds?.modelYear?.min ?? 2018);
+const rangeMin = ref<number>(props.bounds?.epaCombinedRangeMi?.min ?? 0);
+const speedMin = ref<number>(props.bounds?.dcChargingSpeedKw?.min ?? 0);
 
 const selectedFilters = ref({
     manufacturer: [] as string[],
-    drivetrain: [] as string[],
-    sizeClass: [] as string[],
+    driveAxle: [] as string[],
+    vehicleType: [] as string[],
     batteryChemistry: [] as string[],
-    chargingPort: [] as string[],
+    chargingPorts: [] as string[],
     countryOfAssembly: [] as string[],
     infotainmentOperatingSystem: [] as string[],
     soundSystemBrand: [] as string[],
@@ -83,13 +108,12 @@ const selectedFilters = ref({
     supportBatteryPreconditioning: null as boolean | null,
     supportTeslaSupercharging: null as boolean | null,
     supportIso15118: null as boolean | null,
-    supportPhoneAsAKey: null as boolean | null,
+    supportsPhoneAsAKey: null as boolean | null,
     hasPoweredLiftgate: null as boolean | null,
-    supportOnePedalDrive: null as boolean | null,
+    hasOnePedalDrive: null as boolean | null,
     hasAdaptiveCruiseControl: null as boolean | null,
     hasGlassRoof: null as boolean | null,
-    supportsAppleCarPlay: null as boolean | null,
-    supportsAndroidAuto: null as boolean | null,
+    supportsCarPlayAndroidAuto: null as boolean | null,
     hasPoweredSeats: null as boolean | null,
     hasVentilatedSeats: null as boolean | null,
     hasHeatedSeats: null as boolean | null,
@@ -100,28 +124,48 @@ const selectedFilters = ref({
     hasAutoDimmingMirrors: null as boolean | null
 });
 
-const stringFilterGroups = computed((): StringGroupConfig[] => [
-    { title: 'Manufacturer', key: 'manufacturer', choices: props.options.manufacturer || [] },
-    { title: 'Drivetrain', key: 'drivetrain', choices: props.options.drivetrain || [] },
-    { title: 'Size Class', key: 'sizeClass', choices: props.options.sizeClass || [] },
-    { title: 'Battery Chemistry', key: 'batteryChemistry', choices: props.options.batteryChemistry || [] },
-    { title: 'Charging Port', key: 'chargingPort', choices: props.options.chargingPort || [] },
-    { title: 'Country of Assembly', key: 'countryOfAssembly', choices: props.options.countryOfAssembly || [] },
-    { title: 'Operating System', key: 'infotainmentOperatingSystem', choices: props.options.infotainmentOperatingSystem || [] },
-    { title: 'Sound Brand', key: 'soundSystemBrand', choices: props.options.soundSystemBrand || [] }
-]);
+// Normalizes arrays and extracts elements from comma-delimited list variables
+const normalizeChoices = (rawChoices: unknown): string[] => {
+    if (!rawChoices) return [];
+
+    const items = Array.isArray(rawChoices) ? rawChoices : [String(rawChoices)];
+    const expanded = items.flatMap(item => {
+        if (typeof item === 'string' && item.includes(',')) {
+            return item.split(',').map(s => s.trim());
+        }
+        return String(item).trim();
+    });
+
+    return Array.from(new Set(expanded)).filter(Boolean).sort();
+};
+
+const stringFilterGroups = computed((): StringGroupConfig[] => {
+    // Dynamic fallback checking resolves property mismatches for keys like infotainmentOs
+    const infoOsChoices = props.options.infotainmentOperatingSystem || props.options.infotainmentOs || [];
+    const portsChoices = props.options.chargingPorts || [];
+
+    return [
+        { title: 'Manufacturer', key: 'manufacturer', choices: normalizeChoices(props.options.manufacturer) },
+        { title: 'Drivetrain', key: 'driveAxle', choices: normalizeChoices(props.options.driveAxle) },
+        { title: 'Size Class', key: 'vehicleType', choices: normalizeChoices(props.options.vehicleType) },
+        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeChoices(props.options.batteryChemistry) },
+        { title: 'Charging Port', key: 'chargingPorts', choices: normalizeChoices(portsChoices) },
+        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeChoices(props.options.countryOfAssembly) },
+        { title: 'Operating System', key: 'infotainmentOperatingSystem', choices: normalizeChoices(infoOsChoices) },
+        { title: 'Sound Brand', key: 'soundSystemBrand', choices: normalizeChoices(props.options.soundSystemBrand) }
+    ];
+});
 
 const booleanFilters = [
     { key: 'supportBatteryPreconditioning', label: 'Battery Preconditioning' },
     { key: 'supportTeslaSupercharging', label: 'Tesla Supercharging' },
     { key: 'supportIso15118', label: 'ISO 15118 (Plug & Charge)' },
-    { key: 'supportPhoneAsAKey', label: 'Phone as a Key' },
+    { key: 'supportsPhoneAsAKey', label: 'Phone as a Key' },
     { key: 'hasPoweredLiftgate', label: 'Powered Liftgate' },
-    { key: 'supportOnePedalDrive', label: 'One-Pedal Drive' },
+    { key: 'hasOnePedalDrive', label: 'One-Pedal Drive' },
     { key: 'hasAdaptiveCruiseControl', label: 'Adaptive Cruise Control' },
     { key: 'hasGlassRoof', label: 'Glass Roof' },
-    { key: 'supportsAppleCarPlay', label: 'Apple CarPlay' },
-    { key: 'supportsAndroidAuto', label: 'Android Auto' },
+    { key: 'supportsCarPlayAndroidAuto', label: 'CarPlay & Android Auto' },
     { key: 'hasPoweredSeats', label: 'Powered Seats' },
     { key: 'hasVentilatedSeats', label: 'Ventilated Seats' },
     { key: 'hasHeatedSeats', label: 'Heated Seats' },
@@ -169,11 +213,11 @@ const removeChip = (chip: { type: 'string' | 'boolean'; categoryKey: string; dis
 };
 
 const syncAndEmit = () => {
-    const payload = {
+    const payload: FilterState = {
         ...structuredClone(toRaw(selectedFilters.value)),
         modelYear: { min: Number(yearMin.value), max: null },
-        rangeEpaCombined: { min: Number(rangeMin.value), max: null },
-        chargingSpeedDc: { min: Number(speedMin.value), max: null }
+        epaCombinedRangeMi: { min: Number(rangeMin.value), max: null },
+        dcChargingSpeedKw: { min: Number(speedMin.value), max: null }
     };
     emitChange('filter-change', payload);
 };
@@ -184,8 +228,8 @@ const resetAllFilters = () => {
 
     if (props.bounds) {
         yearMin.value = props.bounds.modelYear.min;
-        rangeMin.value = props.bounds.rangeEpaCombined.min;
-        speedMin.value = props.bounds.chargingSpeedDc.min;
+        rangeMin.value = props.bounds.epaCombinedRangeMi.min;
+        speedMin.value = props.bounds.dcChargingSpeedKw.min;
     }
     syncAndEmit();
 };
@@ -212,8 +256,8 @@ const getPercent = (value: number, min: number, max: number): number => {
 const applyBounds = (boundsSource: BoundsProp) => {
     if (!boundsSource) return;
     yearMin.value = boundsSource.modelYear.min;
-    rangeMin.value = boundsSource.rangeEpaCombined.min;
-    speedMin.value = boundsSource.chargingSpeedDc.min;
+    rangeMin.value = boundsSource.epaCombinedRangeMi.min;
+    speedMin.value = boundsSource.dcChargingSpeedKw.min;
 };
 
 onMounted(() => {
@@ -258,15 +302,15 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min EPA Range: <strong>{{ rangeMin }} mi</strong></span>
-                <input type="range" :min="bounds.rangeEpaCombined.min" :max="bounds.rangeEpaCombined.max" step="10"
+                <input type="range" :min="bounds.epaCombinedRangeMi.min" :max="bounds.epaCombinedRangeMi.max" step="10"
                     v-model.number="rangeMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.rangeEpaCombined.min, bounds.rangeEpaCombined.max)}%, #e2e8f0 100%)` }" />
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.epaCombinedRangeMi.min, bounds.epaCombinedRangeMi.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.epaCombinedRangeMi.min, bounds.epaCombinedRangeMi.max)}%, #e2e8f0 100%)` }" />
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min DC Charge: <strong>{{ speedMin }} kW</strong></span>
-                <input type="range" :min="bounds.chargingSpeedDc.min" :max="bounds.chargingSpeedDc.max" step="25"
+                <input type="range" :min="bounds.dcChargingSpeedKw.min" :max="bounds.dcChargingSpeedKw.max" step="25"
                     v-model.number="speedMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.chargingSpeedDc.min, bounds.chargingSpeedDc.max)}%, #e2e8f0 100%)` }" />
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.dcChargingSpeedKw.min, bounds.dcChargingSpeedKw.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.dcChargingSpeedKw.min, bounds.dcChargingSpeedKw.max)}%, #e2e8f0 100%)` }" />
             </div>
         </div>
 
@@ -314,7 +358,7 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 66px -1px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
     gap: 14px;

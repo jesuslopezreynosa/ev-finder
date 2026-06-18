@@ -5,50 +5,86 @@ import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
 
-// Setup `i18n-iso-countries`
 countries.registerLocale(enLocale);
 
 const baseUrl = import.meta.env.BASE_URL;
 
+interface Vehicle {
+    modelYear: number;
+    manufacturer: string;
+    model: string;
+    trim: string;
+    driveAxle: string;
+    batteryCapacityNet: number;
+    vehicleType: string;
+    epaCombinedRangeMi: number;
+    chargingPorts: string | string[];
+    dcChargingSpeedKw: number;
+    batteryChemistry: string;
+    countryOfAssembly: string;
+    infotainmentOperatingSystem: string;
+    soundSystemBrand: string;
+    supportBatteryPreconditioning: any;
+    supportTeslaSupercharging: any;
+    supportIso15118: any;
+    supportsPhoneAsAKey: any;
+    hasPoweredLiftgate: any;
+    hasOnePedalDrive: any;
+    hasAdaptiveCruiseControl: any;
+    hasGlassRoof: any;
+    supportsCarPlayAndroidAuto: any;
+    hasPoweredSeats: any;
+    hasVentilatedSeats: any;
+    hasHeatedSeats: any;
+    hasHeatedSteeringWheel: any;
+    hasHeatPump: any;
+    hasPoweredSideMirrors: any;
+    hasDashcam: any;
+    hasAutoDimmingMirrors: any;
+    [key: string]: any;
+}
+
 const props = defineProps<{
-    vehicles: any[];
+    vehicles: Vehicle[];
 }>();
 
-// Return Country's Full Name from ISO Alpha-3 code
 const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     if (!alpha3Code) return '';
     const cleaned = String(alpha3Code).trim().toUpperCase();
-
     try {
-        return countries.getName(alpha3Code, 'en') || cleaned;
+        return countries.getName(cleaned, 'en') || cleaned;
     } catch (e) {
         console.error('Intl.DisplayNames matching failed:', cleaned, e);
     }
-
     return cleaned;
 };
 
-// Converts the charging port name into an normalized array
+// Converts the charging port name into a normalized array, splitting comma-separated strings
 const getChargingPortsArray = (portValue: any): string[] => {
     if (!portValue) return [];
+
     if (Array.isArray(portValue)) {
-        return portValue.map(p => String(p).trim());
+        return portValue.flatMap(p =>
+            String(p).split(',').map(item => item.trim())
+        ).filter(Boolean);
     }
-    return [String(portValue).trim()];
+
+    return String(portValue)
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
 };
 
-// Generates absolute paths from the public folder
 const getChargingPortIconUrl = (portName: string): string => {
     if (!portName) return '';
     const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    // Points directly to public/icons/filename.svg
-    return `${ baseUrl }/icons/${ filename }.svg`;
+    return `${baseUrl}/icons/${filename}.svg`;
 };
 
 const dynamicFilterOptions = computed(() => {
     const stringCategories = [
-        'manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry',
-        'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'
+        'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
+        'chargingPorts', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'
     ] as const;
 
     const optionsMap: Record<string, string[]> = {};
@@ -57,7 +93,12 @@ const dynamicFilterOptions = computed(() => {
         const uniqueVals = new Set<string>();
 
         props.vehicles.forEach(v => {
-            const val = v[key];
+            // Check fallback for structural property keys
+            let val = v[key];
+            if (key === 'infotainmentOperatingSystem' && val === undefined) {
+                val = v.infotainmentOs;
+            }
+
             if (val === null || val === undefined || val === '') return;
 
             if (Array.isArray(val)) {
@@ -69,6 +110,8 @@ const dynamicFilterOptions = computed(() => {
                 if (fullCountryName) {
                     uniqueVals.add(fullCountryName);
                 }
+            } else if (typeof val === 'string' && val.includes(',')) {
+                val.split(',').forEach(item => uniqueVals.add(item.trim()));
             } else {
                 uniqueVals.add(String(val).trim());
             }
@@ -77,24 +120,29 @@ const dynamicFilterOptions = computed(() => {
         optionsMap[key] = Array.from(uniqueVals).sort((a, b) => a.localeCompare(b));
     });
 
+    // Provide options via both naming variations to keep child configurations stable
+    if (optionsMap.infotainmentOperatingSystem) {
+        optionsMap.infotainmentOs = optionsMap.infotainmentOperatingSystem;
+    }
+
     return optionsMap;
 });
 
 const dataBounds = computed(() => {
     const years = props.vehicles.map(v => v.modelYear).filter(Boolean);
-    const ranges = props.vehicles.map(v => v.rangeEpaCombined).filter(Boolean);
-    const speeds = props.vehicles.map(v => v.chargingSpeedDc).filter(Boolean);
+    const ranges = props.vehicles.map(v => v.epaCombinedRangeMi).filter(Boolean);
+    const speeds = props.vehicles.map(v => v.dcChargingSpeedKw).filter(Boolean);
 
     return {
         modelYear: {
             min: years.length ? Math.min(...years) : 2018,
             max: years.length ? Math.max(...years) : ((new Date()).getFullYear() + 1)
         },
-        rangeEpaCombined: {
+        epaCombinedRangeMi: {
             min: ranges.length ? Math.max(0, Math.min(...ranges)) : 0,
             max: ranges.length ? Math.max(0, Math.max(...ranges)) : 500
         },
-        chargingSpeedDc: {
+        dcChargingSpeedKw: {
             min: speeds.length ? Math.max(0, Math.min(...speeds)) : 0,
             max: speeds.length ? Math.max(0, Math.max(...speeds)) : 350
         }
@@ -104,7 +152,7 @@ const dataBounds = computed(() => {
 const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleIndex = ref<number | null>(null);
 
-const updateFilters = (newFilters: any) => {
+const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
@@ -112,22 +160,101 @@ const toggleSelectVehicle = (index: number) => {
     selectedVehicleIndex.value = selectedVehicleIndex.value === index ? null : index;
 };
 
-const formatDisplaySpecs = (vehicle: any) => {
-    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'drivetrain'];
+const formatDisplaySpecs = (vehicle: Vehicle) => {
+    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle'];
+
+    // Distinct standalone tokens that must be fully forced to uppercase
+    const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
 
     return Object.entries(vehicle)
         .filter(([key, value]) => !skipKeys.includes(key) && value !== null && value !== undefined && value !== '')
         .map(([key, value]) => {
-            const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            let displayValue = value;
+            let label = key;
 
+            if (label === 'infotainmentOs') {
+                label = 'infotainmentOperatingSystem';
+            }
+
+            // 1. Initial generic camelCase boundary spacing
+            label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
+            label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+            label = label.replace(/^./, str => str.toUpperCase());
+
+            // 2. Clear alphanumeric transitions (e.g., 'Ac277v' -> 'Ac 277 v', 'Iso15118' -> 'Iso 15118')
+            label = label.replace(/([a-zA-Z])(\d+)/g, '$1 $2');
+            label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
+            label = label.replace(/\s+/g, ' ').trim();
+
+            // 3. Dynamic Acronym Capitalization
+            acronyms.forEach(acronym => {
+                const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
+                label = label.replace(regex, acronym.toUpperCase());
+            });
+
+            // 4. Exact contextual word repairs
+            label = label.replace(/\bCar\s+Play\b/gi, 'CarPlay');
+            label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
+            label = label.replace(/\bAnd\b/g, '&');
+
+            // 5. Tail-end layout unit formatting using an ordered dictionary loop
+            const unitReplacements: Record<string, string> = {
+                'KWH 100 MI': '(kWh / 100mi)',
+                'WH MI': '(Wh/mi)',
+                'KWH': '(kWh)',
+                'KW': '(kW)',
+                'MI': '(mi)',
+                'IN': '(in)',
+                'L': '(L)'
+            };
+
+            for (const [rawTarget, formattedValue] of Object.entries(unitReplacements)) {
+                const targetRegex = new RegExp(`\\b${rawTarget}$`, 'i');
+                if (targetRegex.test(label)) {
+                    label = label.replace(targetRegex, formattedValue);
+                    break; // Escape immediately so sub-tokens don't trigger double parentheticals
+                }
+            }
+
+            // 6. Close up structural layout gaps for units following digits (e.g., '277 V' -> '277V')
+            label = label.replace(/(\d+)\s+V\b/g, '$1V');
+            label = label.replace(/\s+/g, ' ').trim();
+
+            let displayValue = value;
             if (key === 'countryOfAssembly') {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
             } else if (Array.isArray(value)) {
                 displayValue = value.join(', ');
             }
+
             return { label, val: displayValue };
         });
+};
+
+const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
+    if (rawValue === null || rawValue === undefined) return false;
+    const cleanStr = String(rawValue).trim().toLowerCase();
+
+    switch (key) {
+        case 'hasPoweredLiftgate':
+        case 'hasGlassRoof':
+            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
+
+        case 'hasOnePedalDrive':
+            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
+
+        case 'supportsPhoneAsAKey':
+            return cleanStr !== 'no';
+
+        case 'hasAdaptiveCruiseControl':
+            return !cleanStr.includes('no');
+
+        case 'supportsCarPlayAndroidAuto':
+            return cleanStr.includes('yes') || (cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '');
+
+        // Comfort and alternative tech feature rules (match if present and not 'no')
+        default:
+            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
+    }
 };
 
 const filteredVehicles = computed(() => {
@@ -136,13 +263,20 @@ const filteredVehicles = computed(() => {
     const filters = currentFilters.value;
 
     return props.vehicles.filter(vehicle => {
-        const stringCategories = ['manufacturer', 'drivetrain', 'sizeClass', 'batteryChemistry', 'chargingPort', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'] as const;
+        const stringCategories = [
+            'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
+            'chargingPorts', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'
+        ] as const;
 
         const matchesStrings = stringCategories.every(key => {
             const selections = filters[key];
             if (!selections || selections.length === 0) return true;
 
-            const rawValue = vehicle[key];
+            let rawValue = vehicle[key];
+            if (key === 'infotainmentOperatingSystem' && rawValue === undefined) {
+                rawValue = vehicle.infotainmentOs;
+            }
+
             if (rawValue === null || rawValue === undefined) return false;
 
             let targetValues: string[] = [];
@@ -150,6 +284,8 @@ const filteredVehicles = computed(() => {
                 targetValues = rawValue.map(v => String(v).trim());
             } else if (key === 'countryOfAssembly') {
                 targetValues = [getCountryNameFromIsoAlphaThreeCode(String(rawValue))];
+            } else if (typeof rawValue === 'string' && rawValue.includes(',')) {
+                targetValues = rawValue.split(',').map(v => v.trim());
             } else {
                 targetValues = [String(rawValue).trim()];
             }
@@ -157,36 +293,29 @@ const filteredVehicles = computed(() => {
             return targetValues.some(val => selections.includes(val));
         });
 
-        const booleanCategories = ['supportBatteryPreconditioning', 'supportTeslaSupercharging', 'supportIso15118', 'supportPhoneAsAKey', 'hasPoweredLiftgate', 'supportOnePedalDrive', 'hasAdaptiveCruiseControl', 'hasGlassRoof', 'supportsAppleCarPlay', 'supportsAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors', 'hasDashcam', 'hasAutoDimmingMirrors'] as const;
+        const booleanCategories = [
+            'supportBatteryPreconditioning', 'supportTeslaSupercharging', 'supportIso15118',
+            'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
+            'hasGlassRoof', 'supportsCarPlayAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
+            'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
+            'hasDashcam', 'hasAutoDimmingMirrors'
+        ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
             if (filterVal === null) return true;
 
-            const rawValue = vehicle[key];
-            let isVehicleFeatureTrue = false;
-
-            if (typeof rawValue === 'boolean') {
-                isVehicleFeatureTrue = rawValue;
-            } else if (typeof rawValue === 'string') {
-                const lower = rawValue.trim().toLowerCase();
-                isVehicleFeatureTrue = lower.length > 0 && lower !== 'false' && lower !== 'no' && lower !== 'n/a';
-            } else if (Array.isArray(rawValue)) {
-                isVehicleFeatureTrue = rawValue.length > 0;
-            } else if (rawValue) {
-                isVehicleFeatureTrue = true;
-            }
-
+            const isVehicleFeatureTrue = evaluateFeaturePresence(key, vehicle[key]);
             return isVehicleFeatureTrue === filterVal;
         });
 
         const vehicleYear = Number(vehicle.modelYear);
-        const vehicleRange = Number(vehicle.rangeEpaCombined);
-        const vehicleSpeed = Number(vehicle.chargingSpeedDc);
+        const vehicleRange = Number(vehicle.epaCombinedRangeMi);
+        const vehicleSpeed = Number(vehicle.dcChargingSpeedKw);
 
         const filterYearMin = Number(filters.modelYear.min);
-        const filterRangeMin = Number(filters.rangeEpaCombined.min);
-        const filterSpeedMin = Number(filters.chargingSpeedDc.min);
+        const filterRangeMin = Number(filters.epaCombinedRangeMi.min);
+        const filterSpeedMin = Number(filters.dcChargingSpeedKw.min);
 
         const matchesRanges =
             (!isNaN(vehicleYear) && vehicleYear >= filterYearMin) &&
@@ -210,23 +339,23 @@ const filteredVehicles = computed(() => {
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                     <p class="trim-drivetrain-line">
                         <strong>{{ vehicle.trim }}</strong>
-                        <span class="drivetrain-pill">{{ vehicle.drivetrain }}</span>
+                        <span class="drivetrain-pill">{{ vehicle.driveAxle }}</span>
                         <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                            <span class="battery-pill">{{ vehicle.batteryCapacityNet }} kWh</span>
+                            <span class="battery-pill">{{ vehicle.netBatteryCapacityKwh }} kWh</span>
                         </span>
                     </p>
                     <p class="specs-preview-summary">
-                        <span>{{ vehicle.sizeClass }}</span>
+                        <span>{{ vehicle.vehicleType }}</span>
                         <span class="summary-bullet">&bull;</span>
-                        <span>{{ vehicle.rangeEpaCombined }} mi range</span>
+                        <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
                         <span class="summary-bullet">&bull;</span>
                         <span class="inline-charger-container">
-                            <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPort)" :key="port"
+                            <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)" :key="port"
                                 class="inline-charger-item">
                                 <span :data-tooltip="port" class="tooltip-wrapper">
                                     <img :src="getChargingPortIconUrl(port)" :alt="port" class="charger-inline-icon" />
                                 </span>
-                                <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPort).length - 1"
+                                <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
                                     class="charger-separator">&amp;</span>
                             </span>
                         </span>
