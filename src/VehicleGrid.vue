@@ -232,28 +232,38 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
 
 const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
+
+    // 1. If it's a native boolean, return it directly
+    if (typeof rawValue === 'boolean') return rawValue;
+
+    // 2. If it's a number, treat 1 or higher as true, 0 or lower as false
+    if (typeof rawValue === 'number') return rawValue > 0;
+
+    // 3. Normalize string evaluation
     const cleanStr = String(rawValue).trim().toLowerCase();
 
+    // Catch explicit positive values
+    if (cleanStr === 'yes' || cleanStr === 'true' || cleanStr === '1') {
+        return true;
+    }
+
+    // Catch explicit negative values
+    if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none' || cleanStr === '') {
+        return false;
+    }
+
+    // 4. Fallback rules for complex strings containing descriptive text
     switch (key) {
-        case 'hasPoweredLiftgate':
-        case 'hasGlassRoof':
-            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
-
-        case 'hasOnePedalDrive':
-            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
-
-        case 'supportsPhoneAsAKey':
-            return cleanStr !== 'no';
-
         case 'hasAdaptiveCruiseControl':
             return !cleanStr.includes('no');
 
         case 'supportsCarPlayAndroidAuto':
-            return cleanStr.includes('yes') || (cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '');
+            return cleanStr.includes('yes') || cleanStr.includes('true');
 
-        // Comfort and alternative tech feature rules (match if present and not 'no')
         default:
-            return cleanStr !== 'no' && cleanStr !== 'false' && cleanStr !== '';
+            // If the string doesn't match any explicit negative identifiers,
+            // check if it contains positive signals or default to true for non-empty data strings.
+            return cleanStr.length > 0;
     }
 };
 
@@ -305,7 +315,38 @@ const filteredVehicles = computed(() => {
             const filterVal = filters[key];
             if (filterVal === null) return true;
 
-            const isVehicleFeatureTrue = evaluateFeaturePresence(key, vehicle[key]);
+            // Direct mapping lookup matching component state keys to actual raw dataset variables
+            const dataKeyMapping: Record<string, string[]> = {
+                supportBatteryPreconditioning: ['supportsBatteryPreconditioning', 'supportBatteryPreconditioning', 'batteryPreconditioning'],
+                supportTeslaSupercharging: ['supportsSuperchargerAccess', 'supportTeslaSupercharging', 'teslaSupercharging'],
+                supportIso15118: ['supportsPlugChargeIso15118', 'supportsPlugAndChargeIso15118', 'supportIso15118', 'iso15118'],
+                hasDashcam: ['hasDashcam', 'builtInDashcam', 'dashcam'],
+                hasAutoDimmingMirrors: ['hasAutoDimmingMirrors', 'autoDimmingMirrors']
+            };
+
+            // Find matching data value from key variations, fallback to original key
+            let vehicleValue = undefined;
+            const alternatives = dataKeyMapping[key] || [key];
+
+            for (const altKey of alternatives) {
+                if (vehicle[altKey] !== undefined) {
+                    vehicleValue = vehicle[altKey];
+                    break;
+                }
+            }
+
+            // Fallback object structural scan if still not resolved
+            if (vehicleValue === undefined) {
+                const lowKey = key.toLowerCase();
+                const cleanLowKey = lowKey.replace(/^(has|support|supports)/, '');
+                const foundKey = Object.keys(vehicle).find(vKey => {
+                    const target = vKey.toLowerCase();
+                    return target === lowKey || target.replace(/^(has|support|supports)/, '') === cleanLowKey;
+                });
+                if (foundKey) vehicleValue = vehicle[foundKey];
+            }
+
+            const isVehicleFeatureTrue = evaluateFeaturePresence(key, vehicleValue);
             return isVehicleFeatureTrue === filterVal;
         });
 
