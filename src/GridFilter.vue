@@ -8,7 +8,7 @@ export interface FilterState {
     batteryChemistry: string[];
     chargingPorts: string[];
     countryOfAssembly: string[];
-    infotainmentOperatingSystem: string[];
+    infotainmentOs: string[];
     soundSystemBrand: string[];
 
     modelYear: { min: number; max: number | null; };
@@ -58,7 +58,7 @@ type StringCategoryKey =
     | 'batteryChemistry'
     | 'chargingPorts'
     | 'countryOfAssembly'
-    | 'infotainmentOperatingSystem'
+    | 'infotainmentOs'
     | 'soundSystemBrand';
 
 type BooleanFilterKey =
@@ -89,6 +89,30 @@ const emitChange = defineEmits<{
     (e: 'filter-change', activeFilters: FilterState): void;
 }>();
 
+const isDarkModeActive = ref(false);
+
+const checkCurrentTheme = () => {
+    isDarkModeActive.value = document.documentElement.classList.contains('dark');
+};
+
+const toggleTheme = (): void => {
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    }
+    checkCurrentTheme();
+};
+
+onMounted(() => {
+    checkCurrentTheme();
+
+    const observer = new MutationObserver(checkCurrentTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+});
+
 const activePopoverKey = ref<string | null>(null);
 
 const yearMin = ref<number>(props.bounds?.modelYear?.min ?? 2018);
@@ -102,7 +126,7 @@ const selectedFilters = ref({
     batteryChemistry: [] as string[],
     chargingPorts: [] as string[],
     countryOfAssembly: [] as string[],
-    infotainmentOperatingSystem: [] as string[],
+    infotainmentOs: [] as string[],
     soundSystemBrand: [] as string[],
 
     supportBatteryPreconditioning: null as boolean | null,
@@ -141,7 +165,7 @@ const normalizeChoices = (rawChoices: unknown): string[] => {
 
 const stringFilterGroups = computed((): StringGroupConfig[] => {
     // Dynamic fallback checking resolves property mismatches for keys like infotainmentOs
-    const infoOsChoices = props.options.infotainmentOperatingSystem || props.options.infotainmentOs || [];
+    const infoOsChoices = props.options.infotainmentOs || props.options.infotainmentOs || [];
     const portsChoices = props.options.chargingPorts || [];
 
     return [
@@ -151,7 +175,7 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
         { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeChoices(props.options.batteryChemistry) },
         { title: 'Charging Port', key: 'chargingPorts', choices: normalizeChoices(portsChoices) },
         { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeChoices(props.options.countryOfAssembly) },
-        { title: 'Operating System', key: 'infotainmentOperatingSystem', choices: normalizeChoices(infoOsChoices) },
+        { title: 'Operating System', key: 'infotainmentOs', choices: normalizeChoices(infoOsChoices) },
         { title: 'Sound Brand', key: 'soundSystemBrand', choices: normalizeChoices(props.options.soundSystemBrand) }
     ];
 });
@@ -283,7 +307,12 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     <div class="compact-filter-dashboard">
         <div class="filter-header">
             <h3>Filter Vehicles</h3>
-            <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
+            <div class="filter-actions-group">
+                <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
+                <button @click="toggleTheme" class="theme-toggle-btn" type="button" aria-label="Toggle Theme">
+                    <span>{{ isDarkModeActive ? '☀️' : '🌙' }}</span>
+                </button>
+            </div>
         </div>
 
         <div v-if="activeChipsList.length" class="active-chips-line">
@@ -362,6 +391,13 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     display: flex;
     flex-direction: column;
     gap: 14px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+html.dark .compact-filter-dashboard {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 .filter-header {
@@ -375,6 +411,10 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     font-size: 15px;
     font-weight: 600;
     color: #0f172a;
+}
+
+html.dark .filter-header h3 {
+    color: #ffffff;
 }
 
 .reset-filters-action-btn {
@@ -395,12 +435,28 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border-color: #94a3b8;
 }
 
+html.dark .reset-filters-action-btn {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark .reset-filters-action-btn:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+    border-color: #475569;
+}
+
 .active-chips-line {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     padding: 4px 0;
     border-bottom: 1px solid #f1f5f9;
+}
+
+html.dark .active-chips-line {
+    border-bottom-color: #334155;
 }
 
 .filter-chip {
@@ -415,6 +471,12 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     font-weight: 500;
 }
 
+html.dark .filter-chip {
+    background: #1e3a8a;
+    border-color: #2563eb;
+    color: #eff6ff;
+}
+
 .chip-remove-x {
     background: transparent;
     border: none;
@@ -427,6 +489,10 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     font-weight: 700;
 }
 
+html.dark .chip-remove-x {
+    color: #bfdbfe;
+}
+
 .sliders-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -434,6 +500,10 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     padding: 12px;
     border-radius: 8px;
     gap: 16px;
+}
+
+html.dark .sliders-row {
+    background: #0f172a;
 }
 
 .compact-range-group {
@@ -448,6 +518,10 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     color: #475569;
 }
 
+html.dark .range-meta-label {
+    color: #cbd5e1;
+}
+
 .compact-range-group input[type="range"] {
     width: 100%;
     cursor: pointer;
@@ -455,6 +529,11 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     appearance: none;
     height: 4px;
     border-radius: 2px;
+    background: #e2e8f0;
+}
+
+html.dark .compact-range-group input[type="range"] {
+    background: #334155;
 }
 
 .compact-range-group input[type="range"]::-webkit-slider-thumb {
@@ -464,6 +543,10 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     height: 14px;
     border-radius: 50%;
     background: #2563eb;
+}
+
+html.dark .compact-range-group input[type="range"]::-webkit-slider-thumb {
+    background: #38bdf8;
 }
 
 .dropdowns-row,
@@ -497,10 +580,28 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border-color: #94a3b8;
 }
 
+html.dark .dropdown-trigger-btn {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark .dropdown-trigger-btn:hover {
+    background: #243347;
+    border-color: #475569;
+    color: #ffffff;
+}
+
 .dropdown-trigger-btn.has-active-selections {
     border-color: #2563eb;
     background: #f0f5ff;
     color: #1d4ed8;
+}
+
+html.dark .dropdown-trigger-btn.has-active-selections {
+    border-color: #38bdf8;
+    background: #1e3a8a;
+    color: #ffffff;
 }
 
 .counter-badge {
@@ -510,6 +611,11 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     padding: 1px 5px;
     border-radius: 10px;
     font-weight: 700;
+}
+
+html.dark .counter-badge {
+    background: #38bdf8;
+    color: #0f172a;
 }
 
 .dropdown-popover-box {
@@ -531,6 +637,12 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     gap: 6px;
 }
 
+html.dark .dropdown-popover-box {
+    background: #0f172a;
+    border-color: #475569;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
 .popover-checkbox-item {
     display: flex;
     align-items: center;
@@ -542,8 +654,17 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border-radius: 4px;
 }
 
+html.dark .popover-checkbox-item {
+    color: #cbd5e1;
+}
+
 .popover-checkbox-item:hover {
     background: #f1f5f9;
+}
+
+html.dark .popover-checkbox-item:hover {
+    background: #1e293b;
+    color: #ffffff;
 }
 
 .full-width-anchor {
@@ -555,6 +676,17 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     justify-content: center;
     background: #f1f5f9;
     border-color: #e2e8f0;
+}
+
+html.dark .features-trigger-btn {
+    background: #0f172a;
+    border-color: #334155;
+    color: #38bdf8;
+}
+
+html.dark .features-trigger-btn:hover {
+    background: #1e293b;
+    border-color: #475569;
 }
 
 .features-popover-grid {
@@ -574,6 +706,12 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     z-index: 90;
 }
 
+html.dark .features-popover-grid {
+    background: #0f172a;
+    border-color: #475569;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
 .feature-toggle-pill {
     display: flex;
     justify-content: space-between;
@@ -584,10 +722,19 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border: 1px solid #e2e8f0;
 }
 
+html.dark .feature-toggle-pill {
+    background: #1e293b;
+    border-color: #334155;
+}
+
 .feature-pill-title {
     font-size: 12px;
     color: #475569;
     font-weight: 500;
+}
+
+html.dark .feature-pill-title {
+    color: #cbd5e1;
 }
 
 .feature-select-box {
@@ -596,5 +743,58 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     border-radius: 4px;
     border: 1px solid #cbd5e1;
     background: white;
+    color: #334155;
+}
+
+html.dark .feature-select-box {
+    background: #0f172a;
+    border-color: #475569;
+    color: #ffffff;
+}
+
+/* --- COMPACT ACTION BUTTONS (THEME TOGGLE + RESET) --- */
+.filter-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-toggle-btn,
+.reset-filters-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    border: 1px solid #cbd5e1;
+    background-color: #f1f5f9;
+    color: #334155;
+}
+
+.theme-toggle-btn:hover,
+.reset-filters-action-btn:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+/* Dark Mode Overrides */
+html.dark .theme-toggle-btn,
+html.dark .reset-filters-action-btn {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+html.dark .theme-toggle-btn:hover,
+html.dark .reset-filters-action-btn:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+    border-color: #475569;
 }
 </style>

@@ -14,33 +14,58 @@ interface Vehicle {
     manufacturer: string;
     model: string;
     trim: string;
+    market: string;
     driveAxle: string;
-    batteryCapacityNet: number;
     vehicleType: string;
-    epaCombinedRangeMi: number;
-    chargingPorts: string | string[];
-    dcChargingSpeedKw: number;
-    batteryChemistry: string;
-    countryOfAssembly: string;
-    infotainmentOperatingSystem: string;
-    soundSystemBrand: string;
-    supportBatteryPreconditioning: any;
-    supportTeslaSupercharging: any;
-    supportIso15118: any;
-    supportsPhoneAsAKey: any;
-    hasPoweredLiftgate: any;
-    hasOnePedalDrive: any;
-    hasAdaptiveCruiseControl: any;
-    hasGlassRoof: any;
-    supportsCarPlayAndroidAuto: any;
-    hasPoweredSeats: any;
-    hasVentilatedSeats: any;
-    hasHeatedSeats: any;
-    hasHeatedSteeringWheel: any;
-    hasHeatPump: any;
-    hasPoweredSideMirrors: any;
-    hasDashcam: any;
-    hasAutoDimmingMirrors: any;
+    epaCombEfficiencyKwh100mi: number | null;
+    epaCombEfficiencyWhMi: number;
+    epaCombinedRangeMi: number | null;
+    netBatteryCapacityKwh: number | null;
+    batteryChemistry: string | null;
+    recommendedDailyChargePercent: number | null;
+    effectiveDailyRangeMi: number | null;
+    chargingPorts: string | null;
+    dcChargingSpeedKw: number | null;
+    onboardChargerAmps: number | null;
+    supportsAc277vCharging: string | null;
+    supportsBatteryPreconditioning: string | null;
+    supportsSuperchargerAccess: string | null;
+    supportsPlugAndChargeIso15118: string | null;
+    plugAndChargeProviders: string | null;
+    supportsPhoneAsAKey: string | null;
+    maxPhoneKeys: number | null;
+    hasPoweredLiftgate: string | null;
+    hasOnePedalDrive: string | null;
+    hasPersistentOnePedalDrive: string | null;
+    hasAdaptiveCruiseControl: string | null;
+    hasGlassRoof: string | null;
+    soundPowerWatts: number | null;
+    speakerCount: number | null;
+    subwooferCount: number | null;
+    soundSystemBrand: string | null;
+    supportsCarPlayAndroidAuto: string | null;
+    infotainmentOs: string | null;
+    infotainmentScreenSizeIn: number | null;
+    navigationProvider: string | null;
+    hasPoweredSeats: string | null;
+    hasVentilatedSeats: string | null;
+    hasHeatedSeats: string | null;
+    hasHeatedSteeringWheel: string | null;
+    hasHeatPump: string | null;
+    supportsOta: string | null;
+    hasGarageDoorOpener: string | null;
+    countryOfAssembly: string | null;
+    hasUserProfiles: string | null;
+    hasSeatMirrorPerProfile: string | null;
+    hasPoweredSideMirrors: string | null;
+    hasBuiltInDashcam: string | null;
+    standardSeatMaterial: string | null;
+    frunkCapacityL: number | null;
+    voltageArchitecture: string | null;
+    maxSupportedDcChargingVoltage: string | null;
+    batteryNominalVoltage: string | null;
+    supportsV2x: string | null;
+    seatCount: number | null;
     [key: string]: any;
 }
 
@@ -84,7 +109,7 @@ const getChargingPortIconUrl = (portName: string): string => {
 const dynamicFilterOptions = computed(() => {
     const stringCategories = [
         'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
-        'chargingPorts', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'
+        'chargingPorts', 'countryOfAssembly', 'infotainmentOs', 'soundSystemBrand'
     ] as const;
 
     const optionsMap: Record<string, string[]> = {};
@@ -95,7 +120,7 @@ const dynamicFilterOptions = computed(() => {
         props.vehicles.forEach(v => {
             // Check fallback for structural property keys
             let val = v[key];
-            if (key === 'infotainmentOperatingSystem' && val === undefined) {
+            if (key === 'infotainmentOs' && val === undefined) {
                 val = v.infotainmentOs;
             }
 
@@ -121,30 +146,33 @@ const dynamicFilterOptions = computed(() => {
     });
 
     // Provide options via both naming variations to keep child configurations stable
-    if (optionsMap.infotainmentOperatingSystem) {
-        optionsMap.infotainmentOs = optionsMap.infotainmentOperatingSystem;
+    if (optionsMap.infotainmentOs) {
+        optionsMap.infotainmentOs = optionsMap.infotainmentOs;
     }
 
     return optionsMap;
 });
 
 const dataBounds = computed(() => {
-    const years = props.vehicles.map(v => v.modelYear).filter(Boolean);
-    const ranges = props.vehicles.map(v => v.epaCombinedRangeMi).filter(Boolean);
-    const speeds = props.vehicles.map(v => v.dcChargingSpeedKw).filter(Boolean);
+    const modelYears = props.vehicles.map(v => v.modelYear).filter(Boolean);
+    const epaRanges = props.vehicles.map(v => v.epaCombinedRangeMi).filter(Boolean);
+    const dcChargingSpeeds = props.vehicles.map(v => v.dcChargingSpeedKw).filter(Boolean);
+
+    const validRanges = epaRanges.filter((r): r is number => r !== null);
+    const validSpeeds = dcChargingSpeeds.filter((s): s is number => s !== null);
 
     return {
         modelYear: {
-            min: years.length ? Math.min(...years) : 2018,
-            max: years.length ? Math.max(...years) : ((new Date()).getFullYear() + 1)
+            min: modelYears.length ? Math.min(...modelYears) : 2018,
+            max: modelYears.length ? Math.max(...modelYears) : ((new Date()).getFullYear() + 1)
         },
         epaCombinedRangeMi: {
-            min: ranges.length ? Math.max(0, Math.min(...ranges)) : 0,
-            max: ranges.length ? Math.max(0, Math.max(...ranges)) : 500
+            min: epaRanges.length ? Math.max(0, Math.min(...validRanges)) : 0,
+            max: epaRanges.length ? Math.max(0, Math.max(...validRanges)) : 500
         },
         dcChargingSpeedKw: {
-            min: speeds.length ? Math.max(0, Math.min(...speeds)) : 0,
-            max: speeds.length ? Math.max(0, Math.max(...speeds)) : 350
+            min: dcChargingSpeeds.length ? Math.max(0, Math.min(...validSpeeds)) : 0,
+            max: dcChargingSpeeds.length ? Math.max(0, Math.max(...validSpeeds)) : 350
         }
     };
 });
@@ -172,7 +200,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             let label = key;
 
             if (label === 'infotainmentOs') {
-                label = 'infotainmentOperatingSystem';
+                label = 'infotainmentOs';
             }
 
             // 1. Initial generic camelCase boundary spacing
@@ -275,7 +303,7 @@ const filteredVehicles = computed(() => {
     return props.vehicles.filter(vehicle => {
         const stringCategories = [
             'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
-            'chargingPorts', 'countryOfAssembly', 'infotainmentOperatingSystem', 'soundSystemBrand'
+            'chargingPorts', 'countryOfAssembly', 'infotainmentOs', 'soundSystemBrand'
         ] as const;
 
         const matchesStrings = stringCategories.every(key => {
@@ -283,7 +311,7 @@ const filteredVehicles = computed(() => {
             if (!selections || selections.length === 0) return true;
 
             let rawValue = vehicle[key];
-            if (key === 'infotainmentOperatingSystem' && rawValue === undefined) {
+            if (key === 'infotainmentOs' && rawValue === undefined) {
                 rawValue = vehicle.infotainmentOs;
             }
 
@@ -372,6 +400,12 @@ const filteredVehicles = computed(() => {
     <div class="grid-layout-wrapper">
         <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" @filter-change="updateFilters" />
 
+        <div class="results-status-bar">
+            <span class="status-counter">
+                <strong>{{ filteredVehicles.length }}</strong> of <strong>{{ props.vehicles.length }}</strong> vehicles
+            </span>
+        </div>
+
         <div class="grid-container">
             <div v-for="(vehicle, index) in filteredVehicles" :key="index" class="grid-item"
                 :class="{ 'is-selected': selectedVehicleIndex === index }" @click="toggleSelectVehicle(index)">
@@ -430,11 +464,44 @@ const filteredVehicles = computed(() => {
     padding: 0 16px;
 }
 
+.results-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+html.dark .results-status-bar {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+.status-counter {
+    font-size: 14px;
+    color: #475569;
+}
+
+html.dark .status-counter {
+    color: #cbd5e1;
+}
+
+.status-counter strong {
+    color: #0f172a;
+}
+
+html.dark .status-counter strong {
+    color: #ffffff;
+}
+
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .grid-item {
@@ -449,10 +516,20 @@ const filteredVehicles = computed(() => {
     flex-direction: column;
 }
 
+html.dark .grid-item {
+    background-color: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+}
+
 .grid-item:hover {
     border-color: #cbd5e1;
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+html.dark .grid-item:hover {
+    border-color: #475569;
 }
 
 .grid-item.is-selected {
@@ -461,12 +538,31 @@ const filteredVehicles = computed(() => {
     grid-column: 1 / -1;
 }
 
+html.dark .grid-item.is-selected {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+}
+
+.grid-item h3 {
+    margin: 0;
+    color: #0f172a;
+}
+
+html.dark .grid-item h3 {
+    color: #ffffff;
+}
+
 .trim-drivetrain-line {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 8px 0;
     font-size: 14px;
+    color: #334155;
+}
+
+html.dark .trim-drivetrain-line {
+    color: #cbd5e1;
 }
 
 .drivetrain-pill {
@@ -476,6 +572,13 @@ const filteredVehicles = computed(() => {
     border-radius: 6px;
     font-size: 11px;
     font-weight: 700;
+    border: 1px solid transparent;
+}
+
+html.dark .drivetrain-pill {
+    background-color: #334155;
+    color: #ffffff;
+    border-color: #475569;
 }
 
 .battery-pill {
@@ -486,6 +589,13 @@ const filteredVehicles = computed(() => {
     font-size: 11px;
     font-weight: 700;
     cursor: help;
+    border: 1px solid transparent;
+}
+
+html.dark .battery-pill {
+    background-color: #1e293b;
+    color: #34d399;
+    border-color: #065f46;
 }
 
 .specs-preview-summary {
@@ -499,8 +609,8 @@ const filteredVehicles = computed(() => {
     line-height: 1.2;
 }
 
-.summary-bullet {
-    user-select: none;
+html.dark .specs-preview-summary {
+    color: #94a3b8;
 }
 
 .inline-charger-container {
@@ -521,6 +631,10 @@ const filteredVehicles = computed(() => {
     object-fit: contain;
     cursor: help;
     transition: transform 0.1s ease;
+}
+
+html.dark .charger-inline-icon {
+    filter: invert(1) brightness(2);
 }
 
 .charger-inline-icon:hover {
@@ -546,11 +660,19 @@ const filteredVehicles = computed(() => {
     margin-bottom: 16px;
 }
 
+html.dark .specs-expanded-drawer hr {
+    border-top-color: #334155;
+}
+
 .specs-expanded-drawer h4 {
     margin: 0 0 12px 0;
     color: #1e293b;
     font-size: 14px;
     font-weight: 600;
+}
+
+html.dark .specs-expanded-drawer h4 {
+    color: #f1f5f9;
 }
 
 .specs-matrix-grid {
@@ -568,11 +690,19 @@ const filteredVehicles = computed(() => {
     padding-bottom: 4px;
 }
 
+html.dark .spec-matrix-row {
+    border-bottom-color: #334155;
+}
+
 .spec-label {
     color: #64748b;
     font-weight: 500;
     padding-right: 8px;
     text-align: left;
+}
+
+html.dark .spec-label {
+    color: #94a3b8;
 }
 
 .spec-value {
@@ -582,6 +712,10 @@ const filteredVehicles = computed(() => {
     word-break: break-word;
 }
 
+html.dark .spec-value {
+    color: #ffffff;
+}
+
 .no-results {
     grid-column: 1 / -1;
     text-align: center;
@@ -589,6 +723,9 @@ const filteredVehicles = computed(() => {
     color: #64748b;
 }
 
+/* ==========================================
+   INVERT HOVER TOOLTIPS FOR BATTERY/PLUGS
+   ========================================== */
 .tooltip-wrapper {
     position: relative;
     display: inline-flex;
@@ -612,6 +749,14 @@ const filteredVehicles = computed(() => {
     pointer-events: none;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.15s ease;
+}
+
+/* Tooltip inverted layout rules for dark layouts */
+html.dark .tooltip-wrapper::after {
+    background-color: #f8fafc;
+    color: #0f172a;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .tooltip-wrapper::before {
@@ -626,6 +771,11 @@ const filteredVehicles = computed(() => {
     opacity: 0;
     pointer-events: none;
     z-index: 10;
+    transition: opacity 0.15s ease;
+}
+
+html.dark .tooltip-wrapper::before {
+    border-color: #f8fafc transparent transparent transparent;
 }
 
 .tooltip-wrapper:hover::after,
