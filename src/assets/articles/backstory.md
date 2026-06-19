@@ -20,7 +20,7 @@ Around August 2024, given my partner gave his former gas car to a family member,
 
 Come around August 2025, I wanted to turn in the Tesla early for multiple reasons, and I got a hell-of-a-deal on a 2023 Mustang Mach-E. 
 
-![Mach-E at new GM Energy Station in Lodi, CA](/article-images/mach-e-gm-energy-lodi.png)*-Visiting a recently opened GM Energy station at a Pilot Flying J in Lodi, CA-*
+![Mach-E at new GM Energy Station in Lodi, CA](/article-images/mach-e-gm-energy-lodi.jpeg)*-Visiting a recently opened GM Energy station at a Pilot Flying J in Lodi, CA-*
 
 I have never been a car person, but driving EVs has completely changed that. I feel more in control, I love that I can zip around and I really enjoy learning about how these things work. 
 
