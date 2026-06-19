@@ -11,38 +11,38 @@ import ArticleView from './ArticleView.vue';
 const currentView = ref<string>('grid');
 
 function setView(viewName: string): void {
-  currentView.value = viewName;
+    currentView.value = viewName;
 }
 
 onMounted(() => {
-  const isDark = localStorage.getItem('theme') === 'dark' ||
-    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = localStorage.getItem('theme') === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  if (isDark) {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
 });
 </script>
 
 <template>
-  <Header :active-view="currentView" @change-view="setView" />
+    <Header :active-view="currentView" @change-view="setView" />
 
-  <VehicleGrid v-if="currentView === 'grid'" :vehicles="EvData" />
+    <VehicleGrid v-if="currentView === 'grid'" :vehicles="EvData" />
 
-  <ArticleView v-else :title="currentView" />
+    <ArticleView v-else :title="currentView" />
 </template>
 
 <style>
 html,
 body {
-  margin: 0;
-  padding: 0;
-  transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 html.dark body {
-  background-color: #0f172a;
+    background-color: #0f172a;
 }
 </style>

@@ -84,7 +84,7 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
-// Converts the charging port name into a normalized array, splitting comma-separated strings
+// Converts the charging port name into an array, splitting comma-separated strings
 const getChargingPortsArray = (portValue: any): string[] => {
     if (!portValue) return [];
 
@@ -199,32 +199,28 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         .map(([key, value]) => {
             let label = key;
 
-            if (label === 'infotainmentOs') {
-                label = 'infotainmentOs';
-            }
-
-            // 1. Initial generic camelCase boundary spacing
+            // Camel Case handling
             label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
             label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
             label = label.replace(/^./, str => str.toUpperCase());
 
-            // 2. Clear alphanumeric transitions (e.g., 'Ac277v' -> 'Ac 277 v', 'Iso15118' -> 'Iso 15118')
+            // Alphanumeric term handling (e.g., 'Ac277v' -> 'Ac 277 v', 'Iso15118' -> 'Iso 15118')
             label = label.replace(/([a-zA-Z])(\d+)/g, '$1 $2');
             label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
             label = label.replace(/\s+/g, ' ').trim();
 
-            // 3. Dynamic Acronym Capitalization
+            // Acronym capitalization
             acronyms.forEach(acronym => {
                 const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
                 label = label.replace(regex, acronym.toUpperCase());
             });
 
-            // 4. Exact contextual word repairs
+            // Term-specific edge cases
             label = label.replace(/\bCar\s+Play\b/gi, 'CarPlay');
             label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
             label = label.replace(/\bAnd\b/g, '&');
 
-            // 5. Tail-end layout unit formatting using an ordered dictionary loop
+            // Unit formatting
             const unitReplacements: Record<string, string> = {
                 'KWH 100 MI': '(kWh / 100mi)',
                 'WH MI': '(Wh/mi)',
@@ -244,10 +240,11 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 }
             }
 
-            // 6. Close up structural layout gaps for units following digits (e.g., '277 V' -> '277V')
+            // Voltage unit handling (e.g., '277 V' -> '277V')
             label = label.replace(/(\d+)\s+V\b/g, '$1V');
             label = label.replace(/\s+/g, ' ').trim();
 
+            // Convert ISO Alpha-3 Country Code to Full Country Name
             let displayValue = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
@@ -262,13 +259,12 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
 const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
 
-    // 1. If it's a native boolean, return it directly
     if (typeof rawValue === 'boolean') return rawValue;
 
-    // 2. If it's a number, treat 1 or higher as true, 0 or lower as false
+    // Treat 1 or higher as true, 0 or lower as false
     if (typeof rawValue === 'number') return rawValue > 0;
 
-    // 3. Normalize string evaluation
+    // String cleanup
     const cleanStr = String(rawValue).trim().toLowerCase();
 
     // Catch explicit positive values
@@ -277,11 +273,12 @@ const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
     }
 
     // Catch explicit negative values
-    if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none' || cleanStr === '') {
+    // if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none' || cleanStr === '') {
+    if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') {
         return false;
     }
 
-    // 4. Fallback rules for complex strings containing descriptive text
+    // Descriptive string handling
     switch (key) {
         case 'hasAdaptiveCruiseControl':
             return !cleanStr.includes('no');
@@ -344,6 +341,7 @@ const filteredVehicles = computed(() => {
             const filterVal = filters[key];
             if (filterVal === null) return true;
 
+            /** START - Potentially unnecessary section? */
             // Direct mapping lookup matching component state keys to actual raw dataset variables
             const dataKeyMapping: Record<string, string[]> = {
                 supportBatteryPreconditioning: ['supportsBatteryPreconditioning', 'supportBatteryPreconditioning', 'batteryPreconditioning'],
@@ -363,6 +361,7 @@ const filteredVehicles = computed(() => {
                     break;
                 }
             }
+            /** END - Potentially unnecessary section? */
 
             // Fallback object structural scan if still not resolved
             if (vehicleValue === undefined) {
@@ -750,7 +749,6 @@ html.dark .spec-value {
     transition: opacity 0.15s ease;
 }
 
-/* Tooltip inverted layout rules for dark layouts */
 html.dark .tooltip-wrapper::after {
     background-color: #f8fafc;
     color: #0f172a;

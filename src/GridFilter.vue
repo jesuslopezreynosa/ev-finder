@@ -146,7 +146,7 @@ const selectedFilters = ref({
 });
 
 // Normalizes arrays and extracts elements from comma-delimited list variables
-const normalizeChoices = (rawChoices: unknown): string[] => {
+const normalizeListValues = (rawChoices: unknown): string[] => {
     if (!rawChoices) return [];
 
     const items = Array.isArray(rawChoices) ? rawChoices : [String(rawChoices)];
@@ -166,14 +166,14 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
     const portsChoices = props.options.chargingPorts || [];
 
     return [
-        { title: 'Manufacturer', key: 'manufacturer', choices: normalizeChoices(props.options.manufacturer) },
-        { title: 'Drive Axle', key: 'driveAxle', choices: normalizeChoices(props.options.driveAxle) },
-        { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeChoices(props.options.vehicleType) },
-        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeChoices(props.options.batteryChemistry) },
-        { title: 'Charge Port', key: 'chargingPorts', choices: normalizeChoices(portsChoices) },
-        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeChoices(props.options.countryOfAssembly) },
-        { title: 'Infotainment OS', key: 'infotainmentOs', choices: normalizeChoices(infoOsChoices) },
-        { title: 'Sound System Brand', key: 'soundSystemBrand', choices: normalizeChoices(props.options.soundSystemBrand) }
+        { title: 'Manufacturer', key: 'manufacturer', choices: normalizeListValues(props.options.manufacturer) },
+        { title: 'Drive Axle', key: 'driveAxle', choices: normalizeListValues(props.options.driveAxle) },
+        { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeListValues(props.options.vehicleType) },
+        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeListValues(props.options.batteryChemistry) },
+        { title: 'Charge Port', key: 'chargingPorts', choices: normalizeListValues(portsChoices) },
+        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeListValues(props.options.countryOfAssembly) },
+        { title: 'Infotainment OS', key: 'infotainmentOs', choices: normalizeListValues(infoOsChoices) },
+        { title: 'Sound System Brand', key: 'soundSystemBrand', choices: normalizeListValues(props.options.soundSystemBrand) }
     ];
 });
 
@@ -186,15 +186,15 @@ const booleanFilters = [
     { key: 'hasOnePedalDrive', label: 'One-Pedal Drive' },
     { key: 'hasAdaptiveCruiseControl', label: 'Adaptive Cruise Control' },
     { key: 'hasGlassRoof', label: 'Glass Roof' },
-    { key: 'supportsCarPlayAndroidAuto', label: 'CarPlay & Android Auto' },
+    { key: 'supportsCarPlayAndroidAuto', label: 'Apple CarPlay & Android Auto' },
     { key: 'hasPoweredSeats', label: 'Powered Seats' },
     { key: 'hasVentilatedSeats', label: 'Ventilated Seats' },
     { key: 'hasHeatedSeats', label: 'Heated Seats' },
     { key: 'hasHeatedSteeringWheel', label: 'Heated Steering Wheel' },
     { key: 'hasHeatPump', label: 'Heat Pump' },
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
-    { key: 'hasDashcam', label: 'Built-in Dashcam' },
-    { key: 'hasAutoDimmingMirrors', label: 'Auto-Dimming Mirrors' }
+    { key: 'hasAutoDimmingMirrors', label: 'Auto-Dimming Mirrors' },
+    { key: 'hasDashcam', label: 'Built-in Dashcam' }
 ] as const;
 
 const activeChipsList = computed(() => {

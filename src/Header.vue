@@ -10,7 +10,6 @@ defineProps<{
 
 <template>
     <div class="header-wrapper">
-        <!-- Made the logo area an explicit semantic button -->
         <button class="logo-btn" :class="{ active: activeView === 'grid' }" @click="emit('change-view', 'grid')"
             aria-label="Return to EV home grid">
             <h2>EV Finder</h2>
@@ -47,7 +46,6 @@ defineProps<{
     align-items: center;
 }
 
-/* Styled the button to look like a clean modern title layout */
 .logo-btn {
     background: transparent;
     border: none;

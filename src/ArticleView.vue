@@ -17,7 +17,6 @@ let observer: MutationObserver | null = null;
 const modules = import.meta.glob('/src/assets/articles/*.md', { query: '?raw' });
 const targetPath = computed<string>(() => `/src/assets/articles/${props.title}.md`);
 
-// Dynamically grab '/ev-finder/' in production or '/' in local dev from your vite.config.ts
 const baseUrl = import.meta.env.BASE_URL;
 
 const updateDarkModeStatus = (): void => {
@@ -50,11 +49,9 @@ async function loadArticle(path: string): Promise<void> {
             ? fileContent
             : (fileContent as { default: string; }).default;
 
-        // 1. Render the markdown into standard HTML string
         let renderedHtml = md.render(rawMarkdown);
 
-        // 2. Automatically find src="/article-images/..." and turn it into src="/ev-finder/article-images/..."
-        // This ensures it maps perfectly in local development and on GitHub Pages!
+        // Automatically find src="/article-images/..." and turn it into src="/ev-finder/article-images/..."
         renderedHtml = renderedHtml.replace(
             /src="\/article-images\//g,
             `src="${baseUrl}article-images/`
@@ -82,7 +79,6 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 </template>
 
 <style scoped>
-/* (Keep your existing styles here unchanged) */
 .article-view {
     max-width: 800px;
     margin: 0 auto;
@@ -140,7 +136,6 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     font-family: inherit;
 }
 
-/* Ensure images inside your markdown adapt nicely to the page boundaries */
 :deep(.markdown-body) img {
     max-width: 100%;
     height: auto;
