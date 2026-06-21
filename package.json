@@ -5,12 +5,12 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "npx svgo --folder public --recursive && run-p type-check \"build-only {@}\" --",
+        "build": "npx svgo --folder src/assets/icons --recursive && run-p type-check \"build-only {@}\" --",
         "preview": "vite preview",
         "build-only": "vite build",
         "type-check": "vue-tsc --build",
         "predeploy": "npm run type-check && npm run build-only",
-        "deploy": "gh-pages -d dist"
+        "deploy": "gh-pages -d dist --cname ev-finder.jlr.pw"
     },
     "dependencies": {
         "i18n-iso-countries": "^7.14.0",

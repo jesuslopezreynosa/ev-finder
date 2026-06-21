@@ -103,7 +103,7 @@ const getChargingPortsArray = (portValue: any): string[] => {
 const getChargingPortIconUrl = (portName: string): string => {
     if (!portName) return '';
     const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    return `${baseUrl}/icons/${filename}.svg`;
+    return new URL(`./assets/icons/${filename}.svg`, import.meta.url).href;
 };
 
 const dynamicFilterOptions = computed(() => {
