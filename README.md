@@ -2,6 +2,9 @@
 
 ## A web app written in Vue that allows you to filter and find niche specifications for popular EVs sold in the United States
 <!-- Add screenshot -->
+
+## Motivation
+
 I created this web app since I have had several people ask me which EV they should consider, but whenever I looked up certain specs like the vehicles wattage for the sound system, or does it support Plug and Charge, it was a nightmare getting consistent information quickly. This web app shows details that are good to know for EVs specifically and can be filtered down, for example if you want a car that charges faster than 350 kW and has a panoramic glass roof, or if you will only drive a car that has ventilated seats but without CarPlay, then you can find it with this app.
 
 ## Quick Start
