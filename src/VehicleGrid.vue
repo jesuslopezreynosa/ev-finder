@@ -337,9 +337,6 @@ const filteredVehicles = computed(() => {
             return targetValues.some(val => selections.includes(val));
         });
 
-
-        // UNUSED LABELS:       'supportBatteryPreconditioning', 'supportTeslaSupercharging', 'supportIso15118', 'hasDashcam', 'hasAutoDimmingMirrors'
-        // Corrected Labels:    'supportsBatteryPreconditioning', 'supportsSuperchargerAccess', 'supportsPlugAndChargeIso15118', 'hasBuiltInDashcam', DOES NOT EXIST ANYMORE
         const booleanCategories = [
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
             'hasGlassRoof', 'supportsCarPlayAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
