@@ -20,13 +20,13 @@ defineProps<{
                 @click="emit('change-view', 'ev-terminology')">
                 EV Terminology
             </button> -->
-            <!-- <button class="default-btn" :class="{ active: activeView === 'batteries' }"
-                @click="emit('change-view', 'batteries')">
-                Batteries
-            </button> -->
             <!-- <button class="default-btn" :class="{ active: activeView === 'tips' }" @click="emit('change-view', 'tips')">
                 Tips
             </button> -->
+            <button class="default-btn" :class="{ active: activeView === 'batteries' }"
+                @click="emit('change-view', 'batteries')">
+                Batteries
+            </button>
             <button class="default-btn" :class="{ active: activeView === 'backstory' }"
                 @click="emit('change-view', 'backstory')">
                 Backstory

@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import MarkdownIt from 'markdown-it';
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
+import MarkdownIt from 'markdown-it';
+import markdownItMathjax3 from 'markdown-it-mathjax3';
 
 const props = defineProps<{
     title: string;
 }>();
 
-const md = new MarkdownIt();
+const md = new MarkdownIt({
+    html: true // Enable inline HTML
+}).use(markdownItMathjax3);
+
 const articleHtml = ref<string>('');
 const isLoading = ref<boolean>(false);
 const hasError = ref<boolean>(false);
@@ -49,7 +53,8 @@ async function loadArticle(path: string): Promise<void> {
             ? fileContent
             : (fileContent as { default: string; }).default;
 
-        let renderedHtml = md.render(rawMarkdown);
+        const sanitizedMarkdown = rawMarkdown.replace(/<!--[\s\S]*?-->/g, ''); // Remove Markdown comments
+        let renderedHtml = md.render(sanitizedMarkdown);
 
         // Automatically find src="/article-images/..." and turn it into src="/ev-finder/article-images/..."
         renderedHtml = renderedHtml.replace(
@@ -126,14 +131,19 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 }
 
 :deep(.markdown-body) p,
-:deep(.markdown-body) li,
+:deep(.markdown-body) li {
+    line-height: 1.6;
+    margin-bottom: 0.6rem;
+    font-size: inherit;
+}
+
 :deep(.markdown-body) pre,
 :deep(.markdown-body) code {
     line-height: 1.6;
     margin-bottom: 0.6rem;
     font-size: inherit;
     white-space: pre-wrap;
-    font-family: inherit;
+    font-family: monospace;
 }
 
 :deep(.markdown-body) img {
@@ -143,8 +153,22 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     margin: 1rem 0;
 }
 
-.force-dark-colors:deep(*) {
+/* Hide MathJax assistive elements to prevent double rendering */
+:deep(mjx-assistive-mml) {
+    display: none !important;
+}
+
+.force-dark-colors:deep(p),
+.force-dark-colors:deep(li),
+.force-dark-colors:deep(code),
+.force-dark-colors:deep(pre),
+.force-dark-colors:deep(span) {
     color: #cbd5e1 !important;
+}
+
+/* Ensure math formulas render in white during dark mode */
+.force-dark-colors:deep(mjx-container) {
+    color: #ffffff !important;
 }
 
 .force-dark-colors:deep(h1),
