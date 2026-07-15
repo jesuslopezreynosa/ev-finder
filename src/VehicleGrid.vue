@@ -12,18 +12,18 @@ const baseUrl = import.meta.env.BASE_URL;
 interface Vehicle {
     modelYear: number;
     manufacturer: string;
-    model: string;
+    model: string | number;
     trim: string;
     market: string;
     driveAxle: string;
     vehicleType: string;
     epaCombEfficiencyKwh100mi: number | null;
-    epaCombEfficiencyWhMi: number;
+    epaCombEfficiencyWhMi: number | null;
     epaCombinedRangeMi: number | null;
     netBatteryCapacityKwh: number | null;
     batteryChemistry: string | null;
     recommendedDailyChargePercent: number | null;
-    effectiveDailyRangeMi: number | null;
+    typicalFullRangeMi: number | null;
     chargingPorts: string | null;
     dcChargingSpeedKw: number | null;
     onboardChargerAmps: number | null;
@@ -66,6 +66,14 @@ interface Vehicle {
     batteryNominalVoltage: string | null;
     supportsV2x: string | null;
     seatCount: number | null;
+    hasPetMode: string | null;
+    exteriorCameraCount: number | null;
+    interiorCameraCount: number | null;
+    driverCameraType: string | null;
+    exteriorSensors: string | null;
+    vehicleWarranty: string | null;
+    batteryDriveUnitWarranty: string | null;
+    corrosionWarranty: string | null;
     [key: string]: any;
 }
 
@@ -329,39 +337,21 @@ const filteredVehicles = computed(() => {
             return targetValues.some(val => selections.includes(val));
         });
 
+
+        // UNUSED LABELS:       'supportBatteryPreconditioning', 'supportTeslaSupercharging', 'supportIso15118', 'hasDashcam', 'hasAutoDimmingMirrors'
+        // Corrected Labels:    'supportsBatteryPreconditioning', 'supportsSuperchargerAccess', 'supportsPlugAndChargeIso15118', 'hasBuiltInDashcam', DOES NOT EXIST ANYMORE
         const booleanCategories = [
-            'supportBatteryPreconditioning', 'supportTeslaSupercharging', 'supportIso15118',
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
             'hasGlassRoof', 'supportsCarPlayAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
             'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
-            'hasDashcam', 'hasAutoDimmingMirrors'
+            'hasPetMode'
         ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
             if (filterVal === null) return true;
 
-            /** START - Potentially unnecessary section? */
-            // Direct mapping lookup matching component state keys to actual raw dataset variables
-            const dataKeyMapping: Record<string, string[]> = {
-                supportBatteryPreconditioning: ['supportsBatteryPreconditioning', 'supportBatteryPreconditioning', 'batteryPreconditioning'],
-                supportTeslaSupercharging: ['supportsSuperchargerAccess', 'supportTeslaSupercharging', 'teslaSupercharging'],
-                supportIso15118: ['supportsPlugChargeIso15118', 'supportsPlugAndChargeIso15118', 'supportIso15118', 'iso15118'],
-                hasDashcam: ['hasDashcam', 'builtInDashcam', 'dashcam'],
-                hasAutoDimmingMirrors: ['hasAutoDimmingMirrors', 'autoDimmingMirrors']
-            };
-
-            // Find matching data value from key variations, fallback to original key
             let vehicleValue = undefined;
-            const alternatives = dataKeyMapping[key] || [key];
-
-            for (const altKey of alternatives) {
-                if (vehicle[altKey] !== undefined) {
-                    vehicleValue = vehicle[altKey];
-                    break;
-                }
-            }
-            /** END - Potentially unnecessary section? */
 
             // Fallback object structural scan if still not resolved
             if (vehicleValue === undefined) {

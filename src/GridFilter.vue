@@ -13,9 +13,9 @@ export interface FilterState {
     modelYear: { min: number; max: number | null; };
     epaCombinedRangeMi: { min: number; max: number | null; };
     dcChargingSpeedKw: { min: number; max: number | null; };
-    supportBatteryPreconditioning: boolean | null;
-    supportTeslaSupercharging: boolean | null;
-    supportIso15118: boolean | null;
+    supportsBatteryPreconditioning: boolean | null;
+    supportsSuperchargerAccess: boolean | null;
+    supportsPlugAndChargeIso15118: boolean | null;
     supportsPhoneAsAKey: boolean | null;
     hasPoweredLiftgate: boolean | null;
     hasOnePedalDrive: boolean | null;
@@ -28,8 +28,8 @@ export interface FilterState {
     hasHeatedSteeringWheel: boolean | null;
     hasHeatPump: boolean | null;
     hasPoweredSideMirrors: boolean | null;
-    hasDashcam: boolean | null;
-    hasAutoDimmingMirrors: boolean | null;
+    hasBuiltInDashcam: boolean | null;
+    hasPetMode: boolean | null;
 }
 
 interface RangeBounds {
@@ -60,9 +60,9 @@ type StringCategoryKey =
     | 'soundSystemBrand';
 
 type BooleanFilterKey =
-    | 'supportBatteryPreconditioning'
-    | 'supportTeslaSupercharging'
-    | 'supportIso15118'
+    | 'supportsBatteryPreconditioning'
+    | 'supportsSuperchargerAccess'
+    | 'supportsPlugAndChargeIso15118'
     | 'supportsPhoneAsAKey'
     | 'hasPoweredLiftgate'
     | 'hasOnePedalDrive'
@@ -75,8 +75,8 @@ type BooleanFilterKey =
     | 'hasHeatedSteeringWheel'
     | 'hasHeatPump'
     | 'hasPoweredSideMirrors'
-    | 'hasDashcam'
-    | 'hasAutoDimmingMirrors';
+    | 'hasBuiltInDashcam'
+    | 'hasPetMode';
 
 const props = defineProps<{
     bounds: BoundsProp;
@@ -126,9 +126,9 @@ const selectedFilters = ref({
     countryOfAssembly: [] as string[],
     infotainmentOs: [] as string[],
     soundSystemBrand: [] as string[],
-    supportBatteryPreconditioning: null as boolean | null,
-    supportTeslaSupercharging: null as boolean | null,
-    supportIso15118: null as boolean | null,
+    supportsBatteryPreconditioning: null as boolean | null,
+    supportsSuperchargerAccess: null as boolean | null,
+    supportsPlugAndChargeIso15118: null as boolean | null,
     supportsPhoneAsAKey: null as boolean | null,
     hasPoweredLiftgate: null as boolean | null,
     hasOnePedalDrive: null as boolean | null,
@@ -141,8 +141,8 @@ const selectedFilters = ref({
     hasHeatedSteeringWheel: null as boolean | null,
     hasHeatPump: null as boolean | null,
     hasPoweredSideMirrors: null as boolean | null,
-    hasDashcam: null as boolean | null,
-    hasAutoDimmingMirrors: null as boolean | null
+    hasBuiltInDashcam: null as boolean | null,
+    hasPetMode: null as boolean | null
 });
 
 // Normalizes arrays and extracts elements from comma-delimited list variables
@@ -178,9 +178,9 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
 });
 
 const booleanFilters = [
-    { key: 'supportBatteryPreconditioning', label: 'Battery Preconditioning' },
-    { key: 'supportTeslaSupercharging', label: 'Tesla Supercharging' },
-    { key: 'supportIso15118', label: 'Plug & Charge (ISO 15118)' },
+    { key: 'supportsBatteryPreconditioning', label: 'Battery Preconditioning' },
+    { key: 'supportsSuperchargerAccess', label: 'Tesla Supercharging' },
+    { key: 'supportsPlugAndChargeIso15118', label: 'Plug & Charge (ISO 15118)' },
     { key: 'supportsPhoneAsAKey', label: 'Phone as a Key' },
     { key: 'hasPoweredLiftgate', label: 'Powered Liftgate' },
     { key: 'hasOnePedalDrive', label: 'One-Pedal Drive' },
@@ -193,8 +193,8 @@ const booleanFilters = [
     { key: 'hasHeatedSteeringWheel', label: 'Heated Steering Wheel' },
     { key: 'hasHeatPump', label: 'Heat Pump' },
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
-    { key: 'hasAutoDimmingMirrors', label: 'Auto-Dimming Mirrors' },
-    { key: 'hasDashcam', label: 'Built-in Dashcam' }
+    { key: 'hasBuiltInDashcam', label: 'Built-in Dashcam' },
+    { key: 'hasPetMode', label: 'Pet Mode' }
 ] as const;
 
 const activeChipsList = computed(() => {

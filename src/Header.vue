@@ -40,7 +40,7 @@ defineProps<{
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 10px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
