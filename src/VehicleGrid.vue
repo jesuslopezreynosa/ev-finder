@@ -401,10 +401,11 @@ const filteredVehicles = computed(() => {
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                     <p class="trim-drivetrain-line">
                         <strong>{{ vehicle.trim }}</strong>
-                        <span class="drivetrain-pill">{{ vehicle.driveAxle }}</span>
+                        <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
                         <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                            <span class="battery-pill">{{ vehicle.netBatteryCapacityKwh }} kWh</span>
+                            <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
                         </span>
+                        <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
                     </p>
                     <p class="specs-preview-summary">
                         <span>{{ vehicle.vehicleType }}</span>
@@ -552,14 +553,28 @@ html.dark .trim-drivetrain-line {
     color: #cbd5e1;
 }
 
-.drivetrain-pill {
-    background: #eff6ff;
-    color: #1e40af;
+.pill {
     padding: 2px 8px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 700;
     border: 1px solid transparent;
+}
+
+.charging-speed-pill {
+    background: #fefce8;
+    color: #854d0e;
+}
+
+html.dark .charging-speed-pill {
+    background-color: #1e293b;
+    color: #facc15;
+    border-color: #a16207;
+}
+
+.drivetrain-pill {
+    background: #eff6ff;
+    color: #1e40af;
 }
 
 html.dark .drivetrain-pill {
@@ -571,12 +586,7 @@ html.dark .drivetrain-pill {
 .battery-pill {
     background: #f0fdf4;
     color: #166534;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
     cursor: help;
-    border: 1px solid transparent;
 }
 
 html.dark .battery-pill {
