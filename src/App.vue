@@ -14,6 +14,15 @@ function setView(viewName: string): void {
     currentView.value = viewName;
 }
 
+// Sort by these parameters in order: (Manufacturer, Model, Model Year)
+const SortedEvData = EvData.sort((a, b) => {
+    return (
+        String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
+        String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
+        a.modelYear - b.modelYear
+    );
+});
+
 onMounted(() => {
     const isDark = localStorage.getItem('theme') === 'dark' ||
         (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -29,7 +38,7 @@ onMounted(() => {
 <template>
     <Header :active-view="currentView" @change-view="setView" />
 
-    <VehicleGrid v-if="currentView === 'grid'" :vehicles="EvData" />
+    <VehicleGrid v-if="currentView === 'grid'" :vehicles="SortedEvData" />
 
     <ArticleView v-else :title="currentView" />
 </template>
