@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue';
 
 import EvData from '@/assets/ev-specs.json';
 
-import VehicleGrid from './VehicleGrid.vue';
+import VehicleGrid, { type Vehicle } from './VehicleGrid.vue';
 import Header from './Header.vue';
 import ArticleView from './ArticleView.vue';
 
@@ -15,7 +15,7 @@ function setView(viewName: string): void {
 }
 
 // Sort by these parameters in order: (Manufacturer, Model, Model Year)
-const SortedEvData = EvData.sort((a, b) => {
+const SortedEvData: Vehicle[] = EvData.sort((a, b) => {
     return (
         String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
         String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||

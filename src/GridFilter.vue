@@ -30,6 +30,7 @@ export interface FilterState {
     hasPoweredSideMirrors: boolean | null;
     hasBuiltInDashcam: boolean | null;
     hasPetMode: boolean | null;
+    soundDolbyAtmos: boolean | null;
 }
 
 interface RangeBounds {
@@ -76,7 +77,8 @@ type BooleanFilterKey =
     | 'hasHeatPump'
     | 'hasPoweredSideMirrors'
     | 'hasBuiltInDashcam'
-    | 'hasPetMode';
+    | 'hasPetMode'
+    | 'soundDolbyAtmos';
 
 const props = defineProps<{
     bounds: BoundsProp;
@@ -142,7 +144,8 @@ const selectedFilters = ref({
     hasHeatPump: null as boolean | null,
     hasPoweredSideMirrors: null as boolean | null,
     hasBuiltInDashcam: null as boolean | null,
-    hasPetMode: null as boolean | null
+    hasPetMode: null as boolean | null,
+    soundDolbyAtmos: null as boolean | null
 });
 
 // Normalizes arrays and extracts elements from comma-delimited list variables
@@ -194,7 +197,8 @@ const booleanFilters = [
     { key: 'hasHeatPump', label: 'Heat Pump' },
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
     { key: 'hasBuiltInDashcam', label: 'Built-in Dashcam' },
-    { key: 'hasPetMode', label: 'Pet Mode' }
+    { key: 'hasPetMode', label: 'Pet Mode' },
+    { key: 'soundDolbyAtmos', label: 'Dolby Atmos' }
 ] as const;
 
 const activeChipsList = computed(() => {

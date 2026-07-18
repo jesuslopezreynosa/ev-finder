@@ -9,7 +9,7 @@ countries.registerLocale(enLocale);
 
 const baseUrl = import.meta.env.BASE_URL;
 
-interface Vehicle {
+export interface Vehicle {
     modelYear: number;
     manufacturer: string;
     model: string | number;
@@ -42,6 +42,7 @@ interface Vehicle {
     soundPowerWatts: number | null;
     speakerCount: number | null;
     subwooferCount: number | null;
+    soundDolbyAtmos: string | null;
     soundSystemBrand: string | null;
     supportsCarPlayAndroidAuto: string | null;
     infotainmentOs: string | null;
@@ -65,7 +66,7 @@ interface Vehicle {
     maxSupportedDcChargingVoltage: string | null;
     batteryNominalVoltage: string | null;
     supportsV2x: string | null;
-    seatCount: number | null;
+    seatCount: number | string | null;
     hasPetMode: string | null;
     exteriorCameraCount: number | null;
     interiorCameraCount: number | null;
@@ -74,6 +75,7 @@ interface Vehicle {
     vehicleWarranty: string | null;
     batteryDriveUnitWarranty: string | null;
     corrosionWarranty: string | null;
+    towingCapacity: string | null;
     [key: string]: any;
 }
 
@@ -281,7 +283,6 @@ const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
     }
 
     // Catch explicit negative values
-    // if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none' || cleanStr === '') {
     if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') {
         return false;
     }
@@ -341,7 +342,7 @@ const filteredVehicles = computed(() => {
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
             'hasGlassRoof', 'supportsCarPlayAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
             'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
-            'hasPetMode'
+            'hasPetMode', 'soundDolbyAtmos'
         ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
