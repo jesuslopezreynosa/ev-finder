@@ -155,11 +155,6 @@ const dynamicFilterOptions = computed(() => {
         optionsMap[key] = Array.from(uniqueVals).sort((a, b) => a.localeCompare(b));
     });
 
-    // Provide options via both naming variations to keep child configurations stable
-    if (optionsMap.infotainmentOs) {
-        optionsMap.infotainmentOs = optionsMap.infotainmentOs;
-    }
-
     return optionsMap;
 });
 
@@ -190,6 +185,96 @@ const dataBounds = computed(() => {
 const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleIndex = ref<number | null>(null);
 
+const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology'>('chargingPerformance');
+
+const technicalCategories = [
+    { id: 'chargingPerformance', title: 'Charging & Performance' },
+    { id: 'marketWarranty', title: 'Market & Warranty' },
+    { id: 'features', title: 'Features' },
+    { id: 'infotainmentTechnology', title: 'Infotainment & Technology' }
+] as const;
+
+const getFilteredSpecs = (vehicle: Vehicle, tabId: 'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology') => {
+    const rawSpecs = formatDisplaySpecs(vehicle);
+
+    const domainMappings: Record<string, string[]> = {
+        chargingPerformance: [
+            'epacombefficiencykwh100mi',
+            'epacombefficiencywhmi',
+            'epacombinedrangemi',
+            'typicalfullrangemi',
+            'netbatterycapacitykwh',
+            'batterychemistry',
+            'recommendeddailychargepercent',
+            'chargingports',
+            'dcchargingspeedkw',
+            'onboardchargeramps',
+            'supportsac277vcharging',
+            'supportsbatterypreconditioning',
+            'supportssuperchargeraccess',
+            'supportsplugandchargeiso15118',
+            'plugandchargeproviders',
+            'voltagearchitecture',
+            'maxsupporteddcchargingvoltage',
+            'batterynominalvoltage',
+            'supportsv2x',
+            'towingcapacity'
+        ],
+        marketWarranty: [
+            'vehicletype',
+            'market',
+            'countryofassembly',
+            'vehiclewarranty',
+            'corrosionwarranty',
+            'batterydriveunitwarranty'
+        ],
+        features: [
+            'haspoweredliftgate',
+            'hasonepedaldrive',
+            'haspersistentonepedaldrive',
+            'hasadaptivecruisecontrol',
+            'hasglassroof',
+            'haspoweredseats',
+            'hasventilatedseats',
+            'hasheatedseats',
+            'hasheatedsteeringwheel',
+            'hasheatpump',
+            'hasgaragedooropener',
+            'frunkcapacityl',
+            'seatcount',
+            'standardseatmaterial',
+            'haspetmode',
+            'haspoweredsidemirrors'
+        ],
+        infotainmentTechnology: [
+            'supportsphoneasakey',
+            'maxphonekeys',
+            'soundpowerwatts',
+            'speakercount',
+            'subwoofercount',
+            'sounddolbyatmos',
+            'soundsystembrand',
+            'supportscarplayandroidauto',
+            'infotainmentos',
+            'infotainmentscreensizein',
+            'navigationprovider',
+            'supportsota',
+            'hasuserprofiles',
+            'hasseatmirrorperprofile',
+            'hasbuiltindashcam',
+            'exteriorcameracount',
+            'interiorcameracount',
+            'drivercameratype',
+            'exteriorsensors'
+        ]
+    };
+
+    const targets = domainMappings[tabId] || [];
+    return rawSpecs.filter(spec =>
+        targets.includes(spec.originalKey.toLowerCase())
+    );
+};
+
 const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
@@ -200,7 +285,6 @@ const toggleSelectVehicle = (index: number) => {
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle'];
-
     // Distinct standalone tokens that must be fully forced to uppercase
     const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
 
@@ -246,14 +330,13 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 const targetRegex = new RegExp(`\\b${rawTarget}$`, 'i');
                 if (targetRegex.test(label)) {
                     label = label.replace(targetRegex, formattedValue);
-                    break; // Escape immediately so sub-tokens don't trigger double parentheticals
+                    break;
                 }
             }
 
             // Voltage unit handling (e.g., '277 V' -> '277V')
             label = label.replace(/(\d+)\s+V\b/g, '$1V');
             label = label.replace(/\s+/g, ' ').trim();
-
             // Convert ISO Alpha-3 Country Code to Full Country Name
             let displayValue = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
@@ -262,7 +345,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 displayValue = value.join(', ');
             }
 
-            return { label, val: displayValue };
+            return { label, val: displayValue, originalKey: key };
         });
 };
 
@@ -400,7 +483,8 @@ const filteredVehicles = computed(() => {
 
                 <div class="card-main-meta">
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
-                    <p class="trim-drivetrain-line">
+
+                    <p v-if="selectedVehicleIndex !== index" class="trim-drivetrain-line">
                         <strong>{{ vehicle.trim }}</strong>
                         <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
                         <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
@@ -408,7 +492,8 @@ const filteredVehicles = computed(() => {
                         </span>
                         <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
                     </p>
-                    <p class="specs-preview-summary">
+
+                    <p v-if="selectedVehicleIndex !== index" class="specs-preview-summary">
                         <span>{{ vehicle.vehicleType }}</span>
                         <span class="summary-bullet">&bull;</span>
                         <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
@@ -427,14 +512,53 @@ const filteredVehicles = computed(() => {
                 </div>
 
                 <div v-if="selectedVehicleIndex === index" class="specs-expanded-drawer" @click.stop>
-                    <hr />
-                    <h4>Full Technical Specifications</h4>
-                    <div class="specs-matrix-grid">
-                        <div v-for="spec in formatDisplaySpecs(vehicle)" :key="spec.label" class="spec-matrix-row">
-                            <span class="spec-label">{{ spec.label }}:</span>
-                            <span class="spec-value">{{ spec.val }}</span>
+
+                    <div class="hero-specs-dashboard">
+                        <div class="hero-meta-block">
+                            <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
+                            <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
+                                }}</span>
+                        </div>
+                        <div class="hero-metrics-row">
+                            <div class="hero-metric-card highlight-range">
+                                <span class="hero-value">{{ vehicle.epaCombinedRangeMi || '—' }}<span
+                                        class="hero-value-unit">mi</span></span>
+                                <span class="hero-label">EPA Rated Range</span>
+                            </div>
+                            <div class="hero-metric-card highlight-battery">
+                                <span class="hero-value">{{ vehicle.netBatteryCapacityKwh || '—' }}<span
+                                        class="hero-value-unit">kWh</span></span>
+                                <span class="hero-label">Net Capacity ({{ vehicle.batteryChemistry || '' }})</span>
+                            </div>
+                            <div class="hero-metric-card highlight-speed">
+                                <span class="hero-value">{{ vehicle.dcChargingSpeedKw || '—' }}<span
+                                        class="hero-value-unit">kW</span></span>
+                                <span class="hero-label">Peak DC Charging Speed</span>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="tabs-navigation-bar">
+                        <button v-for="tab in technicalCategories" :key="tab.id" type="button" class="tab-nav-btn"
+                            :class="{ 'is-active-tab': activeTabId === tab.id }" @click="activeTabId = tab.id">
+                            {{ tab.title }}
+                        </button>
+                    </div>
+
+                    <div class="tab-content-panel">
+                        <div class="specs-matrix-grid">
+                            <div v-for="spec in getFilteredSpecs(vehicle, activeTabId)" :key="spec.label"
+                                class="spec-matrix-row">
+                                <span class="spec-label">{{ spec.label }}</span>
+                                <span class="spec-value">{{ spec.val }}</span>
+                            </div>
+
+                            <div v-if="getFilteredSpecs(vehicle, activeTabId).length === 0" class="empty-tab-notice">
+                                No secondary attributes mapped within this specification slice.
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -447,7 +571,7 @@ const filteredVehicles = computed(() => {
 
 <style scoped>
 .grid-layout-wrapper {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 16px;
@@ -499,7 +623,7 @@ html.dark .status-counter strong {
     padding: 20px;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
@@ -523,17 +647,21 @@ html.dark .grid-item:hover {
 
 .grid-item.is-selected {
     border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1), 0 8px 10px -6px rgba(37, 99, 235, 0.05);
     grid-column: 1 / -1;
+    cursor: default;
 }
 
 html.dark .grid-item.is-selected {
     border-color: #38bdf8;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
 .grid-item h3 {
     margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: #0f172a;
 }
 
@@ -648,55 +776,207 @@ html.dark .charger-inline-icon {
 }
 
 .specs-expanded-drawer {
-    margin-top: 16px;
-    cursor: default;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.specs-expanded-drawer hr {
-    border: 0;
-    border-top: 1px solid #e2e8f0;
+.hero-specs-dashboard {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+html.dark .hero-specs-dashboard {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+.hero-meta-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
-html.dark .specs-expanded-drawer hr {
-    border-top-color: #334155;
+.hero-subtitle-pill {
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
-.specs-expanded-drawer h4 {
-    margin: 0 0 12px 0;
-    color: #1e293b;
+html.dark .hero-subtitle-pill {
+    background: #475569;
+    color: #f1f5f9;
+}
+
+.hero-subtitle-divider {
+    color: #cbd5e1;
+}
+
+.hero-subtitle-text {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+html.dark .hero-subtitle-text {
+    color: #94a3b8;
+}
+
+.hero-metrics-row {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+}
+
+.hero-metric-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 160px;
+}
+
+.hero-value {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    line-height: 1;
+}
+
+html.dark .hero-value {
+    color: #ffffff;
+}
+
+.hero-value-unit {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: normal;
+    color: #64748b;
+    margin-left: 4px;
+}
+
+html.dark .hero-value-unit {
+    color: #94a3b8;
+}
+
+.hero-label {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+html.dark .hero-label {
+    color: #94a3b8;
+}
+
+.highlight-range .hero-value {
+    color: #2563eb;
+}
+
+html.dark .highlight-range .hero-value {
+    color: #38bdf8;
+}
+
+.highlight-battery .hero-value {
+    color: #166534;
+}
+
+html.dark .highlight-battery .hero-value {
+    color: #34d399;
+}
+
+.highlight-speed .hero-value {
+    color: #b45309;
+}
+
+html.dark .highlight-speed .hero-value {
+    color: #facc15;
+}
+
+.tabs-navigation-bar {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+html.dark .tabs-navigation-bar {
+    border-bottom-color: #334155;
+}
+
+.tab-nav-btn {
+    background: transparent;
+    border: none;
+    padding: 10px 18px;
     font-size: 14px;
     font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    position: relative;
+    bottom: -2px;
+    transition: all 0.15s ease;
+    border-bottom: 2px solid transparent;
 }
 
-html.dark .specs-expanded-drawer h4 {
-    color: #f1f5f9;
+html.dark .tab-nav-btn {
+    color: #94a3b8;
+}
+
+.tab-nav-btn:hover {
+    color: #0f172a;
+}
+
+html.dark .tab-nav-btn:hover {
+    color: #ffffff;
+}
+
+.tab-nav-btn.is-active-tab {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+html.dark .tab-nav-btn.is-active-tab {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+}
+
+.tab-content-panel {
+    padding: 4px 0;
 }
 
 .specs-matrix-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px 32px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px 48px;
 }
 
 .spec-matrix-row {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    font-size: 13px;
-    border-bottom: 1px dashed #e2e8f0;
-    padding-bottom: 4px;
+    flex-direction: column;
+    gap: 4px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
 }
 
 html.dark .spec-matrix-row {
-    border-bottom-color: #334155;
+    border-bottom-color: #1e293b;
 }
 
 .spec-label {
     color: #64748b;
+    font-size: 12px;
     font-weight: 500;
-    padding-right: 8px;
-    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 html.dark .spec-label {
@@ -704,14 +984,23 @@ html.dark .spec-label {
 }
 
 .spec-value {
-    color: #0f172a;
+    color: #1e293b;
+    font-size: 14px;
     font-weight: 600;
-    text-align: right;
     word-break: break-word;
 }
 
 html.dark .spec-value {
-    color: #ffffff;
+    color: #f1f5f9;
+}
+
+.empty-tab-notice {
+    grid-column: 1 / -1;
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
 }
 
 .no-results {
@@ -750,7 +1039,7 @@ html.dark .spec-value {
 html.dark .tooltip-wrapper::after {
     background-color: #f8fafc;
     color: #0f172a;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12 rgba(0, 0, 0, 0.5);
 }
 
 .tooltip-wrapper::before {
