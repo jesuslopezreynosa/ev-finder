@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
 
 countries.registerLocale(enLocale);
-
-const baseUrl = import.meta.env.BASE_URL;
 
 export interface Vehicle {
     modelYear: number;
@@ -465,21 +463,125 @@ const filteredVehicles = computed(() => {
         return matchesStrings && matchesBooleans && matchesRanges;
     });
 });
+
+// Unique Vehicle Composite Identifier
+const getVehicleKey = (v: Vehicle): string => {
+    return `${v.modelYear}-${v.manufacturer}-${v.model}-${v.trim}-${v.driveAxle || ''}-${v.market || ''}`;
+};
+
+// Comparison Feature Implementation
+const selectedForComparison = ref<Vehicle[]>([]);
+const isCompareModalOpen = ref<boolean>(false);
+
+const isVehicleSelectedForCompare = (vehicle: Vehicle): boolean => {
+    const targetKey = getVehicleKey(vehicle);
+    return selectedForComparison.value.some(v => getVehicleKey(v) === targetKey);
+};
+
+const toggleCompareVehicle = (vehicle: Vehicle) => {
+    const targetKey = getVehicleKey(vehicle);
+    const index = selectedForComparison.value.findIndex(v => getVehicleKey(v) === targetKey);
+
+    if (index >= 0) {
+        selectedForComparison.value.splice(index, 1);
+    } else if (selectedForComparison.value.length < 4) {
+        selectedForComparison.value.push(vehicle);
+    }
+};
+
+const clearComparison = () => {
+    selectedForComparison.value = [];
+    isCompareModalOpen.value = false;
+};
+
+const openCompareModal = () => {
+    if (selectedForComparison.value.length > 0) {
+        isCompareModalOpen.value = true;
+    }
+};
+
+const closeCompareModal = () => {
+    isCompareModalOpen.value = false;
+};
+
+const comparisonKeys = computed(() => {
+    if (selectedForComparison.value.length === 0) return [];
+
+    const keysSet = new Set<string>();
+    selectedForComparison.value.forEach(vehicle => {
+        formatDisplaySpecs(vehicle).forEach(spec => {
+            keysSet.add(spec.label);
+        });
+    });
+    return Array.from(keysSet).sort((a, b) => a.localeCompare(b));
+});
+
+const getSpecValueByLabel = (vehicle: Vehicle, label: string) => {
+    const specs = formatDisplaySpecs(vehicle);
+    const found = specs.find(s => s.label === label);
+    return found ? found.val : '—';
+};
+
+// Intersection Observer for Top Bar & Floating Compare CTA
+const topCompareBarRef = ref<HTMLElement | null>(null);
+const isTopBarVisible = ref<boolean>(true);
+let observer: IntersectionObserver | null = null;
+
+onMounted(() => {
+    if ('IntersectionObserver' in window) {
+        observer = new IntersectionObserver(([entry]) => {
+            isTopBarVisible.value = entry.isIntersecting;
+        }, { threshold: 0.1 });
+
+        if (topCompareBarRef.value) {
+            observer.observe(topCompareBarRef.value);
+        }
+    }
+});
+
+onUnmounted(() => {
+    if (observer) {
+        observer.disconnect();
+    }
+});
+
+const isFloatingCompareVisible = computed(() => {
+    return selectedForComparison.value.length > 0 && !isTopBarVisible.value;
+});
 </script>
 
 <template>
     <div class="grid-layout-wrapper">
         <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" @filter-change="updateFilters" />
 
-        <div class="results-status-bar">
+        <div ref="topCompareBarRef" class="results-status-bar">
             <span class="status-counter">
                 <strong>{{ filteredVehicles.length }}</strong> of <strong>{{ props.vehicles.length }}</strong> vehicles
             </span>
+
+            <div class="compare-actions-bar">
+                <button class="compare-trigger-btn" :disabled="selectedForComparison.length < 2"
+                    @click="openCompareModal">
+                    Compare ({{ selectedForComparison.length }}/4)
+                </button>
+                <button v-if="selectedForComparison.length > 0" class="compare-clear-btn" @click="clearComparison">
+                    Clear
+                </button>
+            </div>
         </div>
 
         <div class="grid-container">
-            <div v-for="(vehicle, index) in filteredVehicles" :key="index" class="grid-item"
+            <div v-for="(vehicle, index) in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
                 :class="{ 'is-selected': selectedVehicleIndex === index }" @click="toggleSelectVehicle(index)">
+
+                <div class="card-header-actions">
+                    <label class="compare-checkbox-label" @click.stop>
+                        <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
+                            :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
+                            @change="toggleCompareVehicle(vehicle)" />
+                        <span>Compare</span>
+                    </label>
+                </div>
 
                 <div class="card-main-meta">
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
@@ -517,7 +619,7 @@ const filteredVehicles = computed(() => {
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
                             <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                            }}</span>
+                                }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
@@ -566,6 +668,55 @@ const filteredVehicles = computed(() => {
                 No vehicles match your selected filters.
             </div>
         </div>
+
+        <!-- Floating Compare CTA -->
+        <Transition name="fade-float">
+            <div v-if="isFloatingCompareVisible" class="floating-compare-bar">
+                <button class="compare-trigger-btn floating-trigger-btn" :disabled="selectedForComparison.length < 2"
+                    @click="openCompareModal">
+                    Compare ({{ selectedForComparison.length }}/4)
+                </button>
+                <button class="compare-clear-btn" @click="clearComparison">
+                    Clear
+                </button>
+            </div>
+        </Transition>
+
+        <!-- Comparison Modal Overlay -->
+        <div v-if="isCompareModalOpen" class="compare-modal-overlay" @click.self="closeCompareModal">
+            <div class="compare-modal">
+                <div class="compare-modal-header">
+                    <h2>Vehicle Comparison Matrix</h2>
+                    <button class="compare-close-btn" @click="closeCompareModal">&times;</button>
+                </div>
+                <div class="compare-modal-body">
+                    <table class="compare-table">
+                        <thead>
+                            <tr>
+                                <th class="col-spec-header">Specification</th>
+                                <th v-for="v in selectedForComparison" :key="getVehicleKey(v)"
+                                    class="col-vehicle-header"
+                                    :style="{ width: `calc(80% / ${selectedForComparison.length})` }">
+                                    <div class="compare-column-header">
+                                        <button class="remove-v-btn" @click="toggleCompareVehicle(v)">&times;</button>
+                                        <strong>{{ v.modelYear }} {{ v.manufacturer }} {{ v.model }}</strong>
+                                        <span>{{ v.trim }}</span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="keyLabel in comparisonKeys" :key="keyLabel">
+                                <td class="compare-spec-key">{{ keyLabel }}</td>
+                                <td v-for="v in selectedForComparison" :key="getVehicleKey(v)">
+                                    {{ getSpecValueByLabel(v, keyLabel) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -575,12 +726,13 @@ const filteredVehicles = computed(() => {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 16px;
+    position: relative;
 }
 
 .results-status-bar {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     margin-top: 16px;
     padding: 6px 12px;
     background: #f8fafc;
@@ -608,6 +760,108 @@ html.dark .status-counter {
 
 html.dark .status-counter strong {
     color: #ffffff;
+}
+
+.compare-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compare-trigger-btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.compare-trigger-btn:hover:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
+.compare-trigger-btn:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.compare-clear-btn {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+html.dark .compare-clear-btn {
+    color: #94a3b8;
+    border-color: #475569;
+}
+
+/* Floating Compare Action Bar */
+.floating-compare-bar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+html.dark .floating-compare-bar {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.floating-trigger-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.fade-float-enter-active,
+.fade-float-leave-active {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-float-enter-from,
+.fade-float-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.card-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.compare-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+}
+
+html.dark .compare-checkbox-label {
+    color: #94a3b8;
 }
 
 .grid-container {
@@ -673,7 +927,6 @@ html.dark .grid-item h3 {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    /* Allows entire pills to wrap cleanly to a new row if needed */
     gap: 8px;
     margin: 8px 0;
     font-size: 14px;
@@ -690,8 +943,6 @@ html.dark .trim-drivetrain-line {
     font-size: 11px;
     font-weight: 700;
     border: 1px solid transparent;
-
-    /* Keep pill text inline on a single row */
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
@@ -823,10 +1074,6 @@ html.dark .hero-subtitle-pill {
     color: #f1f5f9;
 }
 
-.hero-subtitle-divider {
-    color: #cbd5e1;
-}
-
 .hero-subtitle-text {
     font-size: 13px;
     color: #64748b;
@@ -915,21 +1162,15 @@ html.dark .highlight-speed .hero-value {
     display: flex;
     gap: 4px;
     border-bottom: 2px solid #f1f5f9;
-
-    /* Enable horizontal scrolling and touch momentum */
     overflow-x: auto;
     max-width: 100%;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
-
-    /* Optional: hide scrollbars for cleaner UI on mobile browsers */
     scrollbar-width: none;
-    /* Firefox */
 }
 
 .tabs-navigation-bar::-webkit-scrollbar {
     display: none;
-    /* Chrome / Safari / Edge */
 }
 
 html.dark .tabs-navigation-bar {
@@ -948,8 +1189,6 @@ html.dark .tabs-navigation-bar {
     bottom: -2px;
     transition: all 0.15s ease;
     border-bottom: 2px solid transparent;
-
-    /* Prevent text wrapping and stop items from squishing below their intrinsic size */
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -1066,7 +1305,7 @@ html.dark .spec-value {
 html.dark .tooltip-wrapper::after {
     background-color: #f8fafc;
     color: #0f172a;
-    box-shadow: 0 4px 12 rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .tooltip-wrapper::before {
@@ -1091,5 +1330,185 @@ html.dark .tooltip-wrapper::before {
 .tooltip-wrapper:hover::after,
 .tooltip-wrapper:hover::before {
     opacity: 1;
+}
+
+/* Modal Styling */
+.compare-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+html.dark .compare-modal-overlay {
+    background-color: rgba(2, 6, 23, 0.8);
+}
+
+.compare-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1200px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+html.dark .compare-modal {
+    background: #0f172a;
+    border: 1px solid #334155;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.compare-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+html.dark .compare-modal-header {
+    border-bottom-color: #1e293b;
+    background-color: #0f172a;
+}
+
+.compare-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #0f172a;
+}
+
+html.dark .compare-modal-header h2 {
+    color: #f8fafc;
+}
+
+.compare-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.15s ease;
+}
+
+html.dark .compare-close-btn {
+    color: #94a3b8;
+}
+
+html.dark .compare-close-btn:hover {
+    color: #f8fafc;
+}
+
+.compare-modal-body {
+    padding: 24px;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+html.dark .compare-modal-body {
+    background-color: #0f172a;
+}
+
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    table-layout: fixed;
+}
+
+.compare-table th,
+.compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: #334155;
+}
+
+html.dark .compare-table th,
+html.dark .compare-table td {
+    border-bottom-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.col-spec-header {
+    width: 20%;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+html.dark .col-spec-header {
+    color: #f8fafc;
+}
+
+.compare-column-header {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding-top: 8px;
+}
+
+.compare-column-header strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+html.dark .compare-column-header strong {
+    color: #f8fafc;
+}
+
+.compare-column-header span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+html.dark .compare-column-header span {
+    color: #94a3b8;
+}
+
+.remove-v-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease;
+}
+
+.remove-v-btn:hover {
+    background: #dc2626;
+}
+
+.compare-spec-key {
+    font-weight: 600;
+    color: #475569;
+    background: #f8fafc;
+}
+
+html.dark .compare-spec-key {
+    color: #f1f5f9;
+    background: #1e293b;
 }
 </style>
