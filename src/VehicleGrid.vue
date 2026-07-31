@@ -530,7 +530,7 @@ let observer: IntersectionObserver | null = null;
 onMounted(() => {
     if ('IntersectionObserver' in window) {
         observer = new IntersectionObserver(([entry]) => {
-            isTopBarVisible.value = entry.isIntersecting;
+            isTopBarVisible.value = entry?.isIntersecting ?? false;
         }, { threshold: 0.1 });
 
         if (topCompareBarRef.value) {
@@ -619,7 +619,7 @@ const isFloatingCompareVisible = computed(() => {
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
                             <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                                }}</span>
+                            }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
