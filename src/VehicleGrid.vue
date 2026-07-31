@@ -517,7 +517,7 @@ const filteredVehicles = computed(() => {
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
                             <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                                }}</span>
+                            }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
@@ -672,6 +672,8 @@ html.dark .grid-item h3 {
 .trim-drivetrain-line {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    /* Allows entire pills to wrap cleanly to a new row if needed */
     gap: 8px;
     margin: 8px 0;
     font-size: 14px;
@@ -688,6 +690,12 @@ html.dark .trim-drivetrain-line {
     font-size: 11px;
     font-weight: 700;
     border: 1px solid transparent;
+
+    /* Keep pill text inline on a single row */
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .charging-speed-pill {
@@ -907,6 +915,21 @@ html.dark .highlight-speed .hero-value {
     display: flex;
     gap: 4px;
     border-bottom: 2px solid #f1f5f9;
+
+    /* Enable horizontal scrolling and touch momentum */
+    overflow-x: auto;
+    max-width: 100%;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+
+    /* Optional: hide scrollbars for cleaner UI on mobile browsers */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.tabs-navigation-bar::-webkit-scrollbar {
+    display: none;
+    /* Chrome / Safari / Edge */
 }
 
 html.dark .tabs-navigation-bar {
@@ -925,6 +948,10 @@ html.dark .tabs-navigation-bar {
     bottom: -2px;
     transition: all 0.15s ease;
     border-bottom: 2px solid transparent;
+
+    /* Prevent text wrapping and stop items from squishing below their intrinsic size */
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 html.dark .tab-nav-btn {
