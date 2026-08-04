@@ -31,7 +31,7 @@ export interface Vehicle {
     supportsPlugAndChargeIso15118: string | null;
     plugAndChargeProviders: string | null;
     supportsPhoneAsAKey: string | null;
-    maxPhoneKeys: number | null;
+    maxPhoneKeys: number | string | null;
     hasPoweredLiftgate: string | null;
     hasOnePedalDrive: string | null;
     hasPersistentOnePedalDrive: string | null;
@@ -619,7 +619,7 @@ const isFloatingCompareVisible = computed(() => {
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
                             <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                            }}</span>
+                                }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
