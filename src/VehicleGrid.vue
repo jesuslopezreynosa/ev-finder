@@ -187,86 +187,43 @@ const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 
 
 const technicalCategories = [
     { id: 'chargingPerformance', title: 'Charging & Performance' },
-    { id: 'marketWarranty', title: 'Market & Warranty' },
     { id: 'features', title: 'Features' },
-    { id: 'infotainmentTechnology', title: 'Infotainment & Technology' }
+    { id: 'infotainmentTechnology', title: 'Infotainment & Technology' },
+    { id: 'marketWarranty', title: 'Market & Warranty' }
 ] as const;
+
+const domainMappings: Record<string, string[]> = {
+    chargingPerformance: [
+        'epacombefficiencykwh100mi', 'epacombefficiencywhmi', 'epacombinedrangemi',
+        'typicalfullrangemi', 'netbatterycapacitykwh', 'batterychemistry',
+        'recommendeddailychargepercent', 'chargingports', 'dcchargingspeedkw',
+        'onboardchargeramps', 'supportsac277vcharging', 'supportsbatterypreconditioning',
+        'supportssuperchargeraccess', 'supportsplugandchargeiso15118', 'plugandchargeproviders',
+        'voltagearchitecture', 'maxsupporteddcchargingvoltage', 'batterynominalvoltage',
+        'supportsv2x', 'towingcapacity'
+    ],
+    marketWarranty: [
+        'vehicletype', 'market', 'countryofassembly', 'vehiclewarranty',
+        'corrosionwarranty', 'batterydriveunitwarranty'
+    ],
+    features: [
+        'haspoweredliftgate', 'hasonepedaldrive', 'haspersistentonepedaldrive',
+        'hasadaptivecruisecontrol', 'hasglassroof', 'haspoweredseats',
+        'hasventilatedseats', 'hasheatedseats', 'hasheatedsteeringwheel',
+        'hasheatpump', 'hasgaragedooropener', 'frunkcapacityl', 'seatcount',
+        'standardseatmaterial', 'haspetmode', 'haspoweredsidemirrors'
+    ],
+    infotainmentTechnology: [
+        'supportsphoneasakey', 'maxphonekeys', 'soundpowerwatts', 'speakercount',
+        'subwoofercount', 'sounddolbyatmos', 'soundsystembrand', 'supportscarplayandroidauto',
+        'infotainmentos', 'infotainmentscreensizein', 'navigationprovider', 'supportsota',
+        'hasuserprofiles', 'hasseatmirrorperprofile', 'hasbuiltindashcam',
+        'exteriorcameracount', 'interiorcameracount', 'drivercameratype', 'exteriorsensors'
+    ]
+};
 
 const getFilteredSpecs = (vehicle: Vehicle, tabId: 'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology') => {
     const rawSpecs = formatDisplaySpecs(vehicle);
-
-    const domainMappings: Record<string, string[]> = {
-        chargingPerformance: [
-            'epacombefficiencykwh100mi',
-            'epacombefficiencywhmi',
-            'epacombinedrangemi',
-            'typicalfullrangemi',
-            'netbatterycapacitykwh',
-            'batterychemistry',
-            'recommendeddailychargepercent',
-            'chargingports',
-            'dcchargingspeedkw',
-            'onboardchargeramps',
-            'supportsac277vcharging',
-            'supportsbatterypreconditioning',
-            'supportssuperchargeraccess',
-            'supportsplugandchargeiso15118',
-            'plugandchargeproviders',
-            'voltagearchitecture',
-            'maxsupporteddcchargingvoltage',
-            'batterynominalvoltage',
-            'supportsv2x',
-            'towingcapacity'
-        ],
-        marketWarranty: [
-            'vehicletype',
-            'market',
-            'countryofassembly',
-            'vehiclewarranty',
-            'corrosionwarranty',
-            'batterydriveunitwarranty'
-        ],
-        features: [
-            'haspoweredliftgate',
-            'hasonepedaldrive',
-            'haspersistentonepedaldrive',
-            'hasadaptivecruisecontrol',
-            'hasglassroof',
-            'haspoweredseats',
-            'hasventilatedseats',
-            'hasheatedseats',
-            'hasheatedsteeringwheel',
-            'hasheatpump',
-            'hasgaragedooropener',
-            'frunkcapacityl',
-            'seatcount',
-            'standardseatmaterial',
-            'haspetmode',
-            'haspoweredsidemirrors'
-        ],
-        infotainmentTechnology: [
-            'supportsphoneasakey',
-            'maxphonekeys',
-            'soundpowerwatts',
-            'speakercount',
-            'subwoofercount',
-            'sounddolbyatmos',
-            'soundsystembrand',
-            'supportscarplayandroidauto',
-            'infotainmentos',
-            'infotainmentscreensizein',
-            'navigationprovider',
-            'supportsota',
-            'hasuserprofiles',
-            'hasseatmirrorperprofile',
-            'hasbuiltindashcam',
-            'exteriorcameracount',
-            'interiorcameracount',
-            'drivercameratype',
-            'exteriorsensors'
-        ]
-    };
-
     const targets = domainMappings[tabId] || [];
     return rawSpecs.filter(spec =>
         targets.includes(spec.originalKey.toLowerCase())
@@ -561,6 +518,61 @@ onUnmounted(() => {
 const isFloatingCompareVisible = computed(() => {
     return selectedForComparison.value.length > 0 && !isTopBarVisible.value;
 });
+
+interface ComparisonCategory {
+    id: string;
+    title: string;
+    keys: string[];
+}
+
+const highlightDifferences = ref<boolean>(true);
+
+const comparisonCategories = computed<ComparisonCategory[]>(() => {
+    if (comparisonRegistry.value.size === 0) return [];
+
+    const keysSet = new Set<string>();
+    const originalKeysMap = new Map<string, string>();
+
+    selectedForComparison.value.forEach(vehicle => {
+        formatDisplaySpecs(vehicle).forEach(spec => {
+            keysSet.add(spec.label);
+            originalKeysMap.set(spec.label, spec.originalKey.toLowerCase());
+        });
+    });
+
+    const result: ComparisonCategory[] = [];
+
+    technicalCategories.forEach(category => {
+        const categoryOriginalKeys = domainMappings[category.id] || [];
+        const matchedLabels = Array.from(keysSet).filter(label => {
+            const originalKey = originalKeysMap.get(label);
+            return originalKey && categoryOriginalKeys.includes(originalKey);
+        }).sort((a, b) => a.localeCompare(b));
+
+        if (matchedLabels.length > 0) {
+            result.push({
+                id: category.id,
+                title: category.title,
+                keys: matchedLabels
+            });
+        }
+    });
+
+    return result;
+});
+
+const evaluateRowDifference = (label: string): boolean => {
+    const vehicles = selectedForComparison.value;
+    if (vehicles.length <= 1) return false;
+
+    const baselineValue = getSpecValueByLabel(vehicles[0]!, label);
+    for (let i = 1; i < vehicles.length; i++) {
+        if (getSpecValueByLabel(vehicles[i]!, label) !== baselineValue) {
+            return true;
+        }
+    }
+    return false;
+};
 </script>
 
 <template>
@@ -624,7 +636,7 @@ const isFloatingCompareVisible = computed(() => {
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
                             <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                                }}</span>
+                            }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
@@ -687,7 +699,13 @@ const isFloatingCompareVisible = computed(() => {
             <div class="compare-modal">
                 <div class="compare-modal-header">
                     <h2>Vehicle Comparison Matrix</h2>
-                    <button class="compare-close-btn" @click="closeCompareModal">&times;</button>
+                    <div class="compare-header-controls">
+                        <label class="toggle-differences-label">
+                            <input type="checkbox" v-model="highlightDifferences" />
+                            Highlight Differences
+                        </label>
+                        <button class="compare-close-btn" @click="closeCompareModal">&times;</button>
+                    </div>
                 </div>
                 <div class="compare-modal-body">
                     <table class="compare-table">
@@ -705,8 +723,14 @@ const isFloatingCompareVisible = computed(() => {
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr v-for="keyLabel in comparisonKeys" :key="keyLabel">
+                        <tbody v-for="category in comparisonCategories" :key="category.id">
+                            <tr class="category-header-row">
+                                <td :colspan="selectedForComparison.length + 1">
+                                    <h3>{{ category.title }}</h3>
+                                </td>
+                            </tr>
+                            <tr v-for="keyLabel in category.keys" :key="keyLabel"
+                                :class="{ 'diff-highlight': highlightDifferences && evaluateRowDifference(keyLabel) }">
                                 <td class="compare-spec-key">{{ keyLabel }}</td>
                                 <td v-for="v in selectedForComparison" :key="getVehicleKey(v)">
                                     {{ getSpecValueByLabel(v, keyLabel) }}
@@ -1510,5 +1534,72 @@ html.dark .compare-column-header span {
 html.dark .compare-spec-key {
     color: #f1f5f9;
     background: #1e293b;
+}
+
+.compare-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.toggle-differences-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+html.dark .toggle-differences-label {
+    color: #cbd5e1;
+}
+
+.category-header-row td {
+    background-color: #f1f5f9;
+    padding: 10px 16px;
+    border-bottom: 2px solid #cbd5e1;
+    border-top: 2px solid #cbd5e1;
+}
+
+html.dark .category-header-row td {
+    background-color: #1e293b;
+    border-bottom-color: #475569;
+    border-top-color: #475569;
+}
+
+.category-header-row h3 {
+    margin: 0;
+    font-size: 12px;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+html.dark .category-header-row h3 {
+    color: #94a3b8;
+}
+
+.diff-highlight td {
+    background-color: #fef08a !important;
+    color: #854d0e !important;
+}
+
+html.dark .diff-highlight td {
+    background-color: #422006 !important;
+    color: #fde047 !important;
+}
+
+.diff-highlight .compare-spec-key {
+    background-color: #fde047 !important;
+    color: #713f12 !important;
+}
+
+html.dark .diff-highlight .compare-spec-key {
+    background-color: #713f12 !important;
+    color: #fef08a !important;
 }
 </style>
