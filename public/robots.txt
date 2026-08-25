@@ -1,3 +1,15 @@
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Qwantbot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
 User-agent: GPTBot
 Disallow: /
 
@@ -48,18 +60,6 @@ Disallow: /
 
 User-agent: Bingbot
 Disallow: /
-
-User-agent: Applebot-Extended
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-User-agent: Qwantbot
-Allow: /
-
-User-agent: Googlebot
-Allow: /
 
 User-agent: *
 Disallow: /
