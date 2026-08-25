@@ -15,7 +15,7 @@ function setView(viewName: string): void {
 }
 
 // Sort by these parameters in order: (Manufacturer, Model, Model Year)
-const SortedEvData: Vehicle[] = EvData.sort((a, b) => {
+const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
     return (
         String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
         String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, toRaw } from 'vue';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
@@ -181,7 +181,7 @@ const dataBounds = computed(() => {
 });
 
 const currentFilters = ref<FilterState | null>(null);
-const selectedVehicleIndex = ref<number | null>(null);
+const selectedVehicleKey = ref<string | null>(null);
 
 const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology'>('chargingPerformance');
 
@@ -277,9 +277,18 @@ const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
-const toggleSelectVehicle = (index: number) => {
-    selectedVehicleIndex.value = selectedVehicleIndex.value === index ? null : index;
+const toggleSelectVehicle = (vehicle: Vehicle) => {
+    const key = getVehicleKey(vehicle);
+    selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
 };
+
+// Cache evaluation of technical specifications for the active vehicle
+const activeVehicleSpecs = computed(() => {
+    if (!selectedVehicleKey.value) return [];
+    const vehicle = props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value);
+    if (!vehicle) return [];
+    return getFilteredSpecs(vehicle, activeTabId.value);
+});
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle'];
@@ -347,7 +356,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         });
 };
 
-const evaluateFeaturePresence = (key: string, rawValue: any): boolean => {
+const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
 
     if (typeof rawValue === 'boolean') return rawValue;
@@ -465,42 +474,46 @@ const filteredVehicles = computed(() => {
 });
 
 // Unique Vehicle Composite Identifier
+const vehicleKeyMap = new WeakMap<Vehicle, string>();
+let vehicleIdCounter = 0;
+
 const getVehicleKey = (v: Vehicle): string => {
-    return `${v.modelYear}-${v.manufacturer}-${v.model}-${v.trim}-${v.driveAxle || ''}-${v.market || ''}`;
+    return `${v.modelYear}-${String(v.manufacturer).trim()}-${String(v.model).trim()}-${String(v.trim).trim()}-${v.driveAxle || ''}-${v.market || ''}`;
 };
 
+const comparisonRegistry = ref<Map<string, Vehicle>>(new Map());
+
 // Comparison Feature Implementation
-const selectedForComparison = ref<Vehicle[]>([]);
+const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
 
 const isVehicleSelectedForCompare = (vehicle: Vehicle): boolean => {
-    const targetKey = getVehicleKey(vehicle);
-    return selectedForComparison.value.some(v => getVehicleKey(v) === targetKey);
+    return comparisonRegistry.value.has(getVehicleKey(vehicle));
 };
 
-const toggleCompareVehicle = (vehicle: Vehicle) => {
+const toggleCompareVehicle = (vehicle: Vehicle): void => {
     const targetKey = getVehicleKey(vehicle);
-    const index = selectedForComparison.value.findIndex(v => getVehicleKey(v) === targetKey);
 
-    if (index >= 0) {
-        selectedForComparison.value.splice(index, 1);
-    } else if (selectedForComparison.value.length < 4) {
-        selectedForComparison.value.push(vehicle);
+    if (comparisonRegistry.value.has(targetKey)) {
+        comparisonRegistry.value.delete(targetKey);
+    } else if (comparisonRegistry.value.size < 4) {
+        // Strip the Proxy wrapper before storage to guarantee stable reference extraction later
+        comparisonRegistry.value.set(targetKey, toRaw(vehicle));
     }
 };
 
-const clearComparison = () => {
-    selectedForComparison.value = [];
+const clearComparison = (): void => {
+    comparisonRegistry.value.clear();
     isCompareModalOpen.value = false;
 };
 
-const openCompareModal = () => {
-    if (selectedForComparison.value.length > 0) {
+const openCompareModal = (): void => {
+    if (comparisonRegistry.value.size > 0) {
         isCompareModalOpen.value = true;
     }
 };
 
-const closeCompareModal = () => {
+const closeCompareModal = (): void => {
     isCompareModalOpen.value = false;
 };
 
@@ -553,12 +566,10 @@ const isFloatingCompareVisible = computed(() => {
 <template>
     <div class="grid-layout-wrapper">
         <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" @filter-change="updateFilters" />
-
         <div ref="topCompareBarRef" class="results-status-bar">
             <span class="status-counter">
                 <strong>{{ filteredVehicles.length }}</strong> of <strong>{{ props.vehicles.length }}</strong> vehicles
             </span>
-
             <div class="compare-actions-bar">
                 <button class="compare-trigger-btn" :disabled="selectedForComparison.length < 2"
                     @click="openCompareModal">
@@ -569,34 +580,30 @@ const isFloatingCompareVisible = computed(() => {
                 </button>
             </div>
         </div>
-
         <div class="grid-container">
-            <div v-for="(vehicle, index) in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
-                :class="{ 'is-selected': selectedVehicleIndex === index }" @click="toggleSelectVehicle(index)">
-
-                <div class="card-header-actions">
-                    <label class="compare-checkbox-label" @click.stop>
+            <div v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
+                :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
+                @click="toggleSelectVehicle(vehicle)">
+                <div class="card-header-actions" @click.stop>
+                    <label class="compare-checkbox-label">
                         <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
                             :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
                             @change="toggleCompareVehicle(vehicle)" />
                         <span>Compare</span>
                     </label>
                 </div>
-
                 <div class="card-main-meta">
                     <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
-
-                    <p v-if="selectedVehicleIndex !== index" class="trim-drivetrain-line">
-                        <strong>{{ vehicle.trim }}</strong>
+                    <p v-if="selectedVehicleKey !== getVehicleKey(vehicle)" class="trim-drivetrain-line"> <strong>{{
+                        vehicle.trim }}</strong>
                         <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
                         <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
                             <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
                         </span>
                         <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
                     </p>
-
-                    <p v-if="selectedVehicleIndex !== index" class="specs-preview-summary">
-                        <span>{{ vehicle.vehicleType }}</span>
+                    <p v-if="selectedVehicleKey !== getVehicleKey(vehicle)" class="specs-preview-summary"> <span>{{
+                        vehicle.vehicleType }}</span>
                         <span class="summary-bullet">&bull;</span>
                         <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
                         <span class="summary-bullet">&bull;</span>
@@ -612,9 +619,7 @@ const isFloatingCompareVisible = computed(() => {
                         </span>
                     </p>
                 </div>
-
-                <div v-if="selectedVehicleIndex === index" class="specs-expanded-drawer" @click.stop>
-
+                <div v-if="selectedVehicleKey === getVehicleKey(vehicle)" class="specs-expanded-drawer" @click.stop>
                     <div class="hero-specs-dashboard">
                         <div class="hero-meta-block">
                             <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
@@ -639,31 +644,26 @@ const isFloatingCompareVisible = computed(() => {
                             </div>
                         </div>
                     </div>
-
                     <div class="tabs-navigation-bar">
                         <button v-for="tab in technicalCategories" :key="tab.id" type="button" class="tab-nav-btn"
                             :class="{ 'is-active-tab': activeTabId === tab.id }" @click="activeTabId = tab.id">
                             {{ tab.title }}
                         </button>
                     </div>
-
                     <div class="tab-content-panel">
                         <div class="specs-matrix-grid">
-                            <div v-for="spec in getFilteredSpecs(vehicle, activeTabId)" :key="spec.label"
-                                class="spec-matrix-row">
+                            <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
                                 <span class="spec-label">{{ spec.label }}</span>
                                 <span class="spec-value">{{ spec.val }}</span>
                             </div>
 
-                            <div v-if="getFilteredSpecs(vehicle, activeTabId).length === 0" class="empty-tab-notice">
+                            <div v-if="activeVehicleSpecs.length === 0" class="empty-tab-notice">
                                 No secondary attributes mapped within this specification slice.
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
-
             <div v-if="filteredVehicles.length === 0" class="no-results">
                 No vehicles match your selected filters.
             </div>
