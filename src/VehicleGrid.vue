@@ -140,7 +140,6 @@ const dynamicFilterOptions = computed(() => {
         const uniqueVals = new Set<string>();
 
         props.vehicles.forEach(v => {
-            // Check fallback for structural property keys
             let val = v[key];
             if (key === 'infotainmentOs' && val === undefined) {
                 val = v.infotainmentOs;
@@ -171,12 +170,9 @@ const dynamicFilterOptions = computed(() => {
 });
 
 const dataBounds = computed(() => {
-    const modelYears = props.vehicles.map(v => v.modelYear).filter(Boolean);
-    const epaRanges = props.vehicles.map(v => v.epaCombinedRangeMi).filter(Boolean);
-    const dcChargingSpeeds = props.vehicles.map(v => v.dcChargingSpeedKw).filter(Boolean);
-
-    const validRanges = epaRanges.filter((r): r is number => r !== null);
-    const validSpeeds = dcChargingSpeeds.filter((s): s is number => s !== null);
+    const modelYears = props.vehicles.map(v => Number(v.modelYear)).filter(y => !isNaN(y) && y > 0);
+    const epaRanges = props.vehicles.map(v => Number(v.epaCombinedRangeMi)).filter(r => !isNaN(r) && r > 0);
+    const dcChargingSpeeds = props.vehicles.map(v => Number(v.dcChargingSpeedKw)).filter(s => !isNaN(s) && s > 0);
 
     return {
         modelYear: {
@@ -184,12 +180,12 @@ const dataBounds = computed(() => {
             max: modelYears.length ? Math.max(...modelYears) : ((new Date()).getFullYear() + 1)
         },
         epaCombinedRangeMi: {
-            min: epaRanges.length ? Math.max(0, Math.min(...validRanges)) : 0,
-            max: epaRanges.length ? Math.max(0, Math.max(...validRanges)) : 500
+            min: epaRanges.length ? Math.min(...epaRanges) : 0,
+            max: epaRanges.length ? Math.max(...epaRanges) : 500
         },
         dcChargingSpeedKw: {
-            min: dcChargingSpeeds.length ? Math.max(0, Math.min(...validSpeeds)) : 0,
-            max: dcChargingSpeeds.length ? Math.max(0, Math.max(...validSpeeds)) : 350
+            min: dcChargingSpeeds.length ? Math.min(...dcChargingSpeeds) : 0,
+            max: dcChargingSpeeds.length ? Math.max(...dcChargingSpeeds) : 350
         }
     };
 });
@@ -268,7 +264,6 @@ const closeSelectedVehicle = () => {
     selectedVehicleKey.value = null;
 };
 
-// Cache evaluation of technical specifications for the active vehicle
 const activeVehicle = computed(() => {
     if (!selectedVehicleKey.value) return null;
     return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
@@ -280,8 +275,7 @@ const activeVehicleSpecs = computed(() => {
 });
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
-    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle'];
-    // Distinct standalone tokens that must be fully forced to uppercase
+    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
     const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
 
     return Object.entries(vehicle)
@@ -289,28 +283,23 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         .map(([key, value]) => {
             let label = key;
 
-            // Camel Case handling
             label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
             label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
             label = label.replace(/^./, str => str.toUpperCase());
 
-            // Alphanumeric term handling (e.g., 'Ac277v' -> 'Ac 277 v', 'Iso15118' -> 'Iso 15118')
             label = label.replace(/([a-zA-Z])(\d+)/g, '$1 $2');
             label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
             label = label.replace(/\s+/g, ' ').trim();
 
-            // Acronym capitalization
             acronyms.forEach(acronym => {
                 const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
                 label = label.replace(regex, acronym.toUpperCase());
             });
 
-            // Term-specific edge cases
             label = label.replace(/\bCar\s+Play\b/gi, 'CarPlay');
             label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
             label = label.replace(/\bAnd\b/g, '&');
 
-            // Unit formatting
             const unitReplacements: Record<string, string> = {
                 'KWH 100 MI': '(kWh / 100mi)',
                 'WH MI': '(Wh/mi)',
@@ -330,10 +319,9 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 }
             }
 
-            // Voltage unit handling (e.g., '277 V' -> '277V')
             label = label.replace(/(\d+)\s+V\b/g, '$1V');
             label = label.replace(/\s+/g, ' ').trim();
-            // Convert ISO Alpha-3 Country Code to Full Country Name
+
             let displayValue = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
@@ -350,23 +338,18 @@ const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
 
     if (typeof rawValue === 'boolean') return rawValue;
 
-    // Treat 1 or higher as true, 0 or lower as false
     if (typeof rawValue === 'number') return rawValue > 0;
 
-    // String cleanup
     const cleanStr = String(rawValue).trim().toLowerCase();
 
-    // Catch explicit positive values
     if (cleanStr === 'yes' || cleanStr === 'true' || cleanStr === '1') {
         return true;
     }
 
-    // Catch explicit negative values
     if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') {
         return false;
     }
 
-    // Descriptive string handling
     switch (key) {
         case 'hasAdaptiveCruiseControl':
             return !cleanStr.includes('no');
@@ -375,8 +358,6 @@ const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
             return cleanStr.includes('yes') || cleanStr.includes('true');
 
         default:
-            // If the string doesn't match any explicit negative identifiers,
-            // check if it contains positive signals or default to true for non-empty data strings.
             return cleanStr.length > 0;
     }
 };
@@ -426,11 +407,10 @@ const filteredVehicles = computed(() => {
 
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
-            if (filterVal === null) return true;
+            if (filterVal === null || filterVal === undefined) return true;
 
-            let vehicleValue = undefined;
+            let vehicleValue = vehicle[key];
 
-            // Fallback object structural scan if still not resolved
             if (vehicleValue === undefined) {
                 const lowKey = key.toLowerCase();
                 const cleanLowKey = lowKey.replace(/^(has|support|supports)/, '');
@@ -449,27 +429,37 @@ const filteredVehicles = computed(() => {
         const vehicleRange = Number(vehicle.epaCombinedRangeMi);
         const vehicleSpeed = Number(vehicle.dcChargingSpeedKw);
 
-        const filterYearMin = Number(filters.modelYear.min);
-        const filterRangeMin = Number(filters.epaCombinedRangeMi.min);
-        const filterSpeedMin = Number(filters.dcChargingSpeedKw.min);
+        const filterYearMin = Number(filters.modelYear?.min ?? 0);
+        const filterRangeMin = Number(filters.epaCombinedRangeMi?.min ?? 0);
+        const filterSpeedMin = Number(filters.dcChargingSpeedKw?.min ?? 0);
 
-        const matchesRanges =
-            (!isNaN(vehicleYear) && vehicleYear >= filterYearMin) &&
-            (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin) &&
-            (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin);
+        const matchesYear = isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin);
+        const matchesRange = isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin);
+        const matchesSpeed = isNaN(filterSpeedMin) || filterSpeedMin <= 0 || (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin);
 
-        return matchesStrings && matchesBooleans && matchesRanges;
+        return matchesStrings && matchesBooleans && matchesYear && matchesRange && matchesSpeed;
     });
 });
 
-// Unique Vehicle Composite Identifier
 const getVehicleKey = (v: Vehicle): string => {
-    return `${v.modelYear}-${String(v.manufacturer).trim()}-${String(v.model).trim()}-${String(v.trim).trim()}-${v.driveAxle || ''}-${v.market || ''}`;
+    if (v.id) return String(v.id);
+    const keyParts = [
+        v.modelYear,
+        v.manufacturer,
+        v.model,
+        v.trim,
+        v.driveAxle,
+        v.market,
+        v.batteryChemistry,
+        v.dcChargingSpeedKw,
+        v.netBatteryCapacityKwh
+    ].map(p => String(p ?? '').trim());
+
+    return keyParts.filter(Boolean).join('-');
 };
 
 const comparisonRegistry = ref<Map<string, Vehicle>>(new Map());
 
-// Comparison Feature Implementation
 const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
 
@@ -483,7 +473,6 @@ const toggleCompareVehicle = (vehicle: Vehicle): void => {
     if (comparisonRegistry.value.has(targetKey)) {
         comparisonRegistry.value.delete(targetKey);
     } else if (comparisonRegistry.value.size < 4) {
-        // Strip the Proxy wrapper before storage to guarantee stable reference extraction later
         comparisonRegistry.value.set(targetKey, toRaw(vehicle));
     }
 };
@@ -509,7 +498,6 @@ const getSpecValueByLabel = (vehicle: Vehicle, label: string) => {
     return found ? found.val : '—';
 };
 
-// Intersection Observer for Top Bar & Floating Compare CTA
 const topCompareBarRef = ref<HTMLElement | null>(null);
 const isTopBarVisible = ref<boolean>(true);
 let observer: IntersectionObserver | null = null;
@@ -681,7 +669,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                         class="hero-value-unit">kWh</span></span>
                                 <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                    }})</span>
+                                }})</span>
                             </div>
                             <div class="hero-metric-card highlight-speed">
                                 <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -935,7 +923,7 @@ html.dark .compare-checkbox-label {
 
 .grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
 
@@ -953,6 +941,7 @@ html.dark .compare-checkbox-label {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 html.dark .grid-item {
@@ -1039,6 +1028,7 @@ html.dark .close-expanded-btn {
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #0f172a;
+    word-break: break-word;
 }
 
 html.dark .grid-item h3 {
