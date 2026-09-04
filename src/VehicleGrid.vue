@@ -196,7 +196,7 @@ const selectedVehicleKey = ref<string | null>(null);
 const technicalCategories = [
     { id: 'chargingPerformance', title: 'Charging & Performance' },
     { id: 'features', title: 'Features' },
-    { id: 'infotainmentTechnology', title: 'Infotainment & Technology' },
+    { id: 'infotainmentTechnology', title: 'Infotainment & Tech' },
     { id: 'marketWarranty', title: 'Market & Warranty' },
     { id: 'connectivitySubscriptions', title: 'Connectivity & Subscriptions' },
     { id: 'dimensions', title: 'Dimensions' },
@@ -600,53 +600,111 @@ const evaluateRowDifference = (label: string): boolean => {
 
         <div class="split-view-layout" :class="{ 'has-expanded-card': selectedVehicleKey !== null }">
             <div class="grid-container">
-                <div v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
-                    :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                    @click="toggleSelectVehicle(vehicle)">
-                    <div class="card-header-actions" @click.stop>
-                        <label class="compare-checkbox-label">
-                            <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
-                                :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                                @change="toggleCompareVehicle(vehicle)" />
-                            <span>Compare</span>
-                        </label>
-                    </div>
-                    <div class="card-main-meta">
-                        <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
-                        <p class="trim-drivetrain-line">
-                            <strong>{{ vehicle.trim }}</strong>
-                            <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
-                            <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                                <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
-                            </span>
-                            <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
-                        </p>
-                        <p class="specs-preview-summary">
-                            <span>{{ vehicle.vehicleType }}</span>
-                            <span class="summary-bullet">&bull;</span>
-                            <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
-                            <span class="summary-bullet">&bull;</span>
-                            <span class="inline-charger-container">
-                                <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)" :key="port"
-                                    class="inline-charger-item">
-                                    <span :data-tooltip="port" class="tooltip-wrapper">
-                                        <img :src="getChargingPortIconUrl(port)" :alt="port"
-                                            class="charger-inline-icon" />
-                                    </span>
-                                    <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
-                                        class="charger-separator">&amp;</span>
+                <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
+                    <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
+                        @click="toggleSelectVehicle(vehicle)">
+                        <div class="card-header-actions" @click.stop>
+                            <label class="compare-checkbox-label">
+                                <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
+                                    :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
+                                    @change="toggleCompareVehicle(vehicle)" />
+                                <span>Compare</span>
+                            </label>
+                        </div>
+                        <div class="card-main-meta">
+                            <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
+                            <p class="trim-drivetrain-line">
+                                <strong>{{ vehicle.trim }}</strong>
+                                <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
+                                <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
+                                    <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
                                 </span>
-                            </span>
-                        </p>
+                                <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
+                            </p>
+                            <p class="specs-preview-summary">
+                                <span>{{ vehicle.vehicleType }}</span>
+                                <span class="summary-bullet">&bull;</span>
+                                <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
+                                <span class="summary-bullet">&bull;</span>
+                                <span class="inline-charger-container">
+                                    <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)"
+                                        :key="port" class="inline-charger-item">
+                                        <span :data-tooltip="port" class="tooltip-wrapper">
+                                            <img :src="getChargingPortIconUrl(port)" :alt="port"
+                                                class="charger-inline-icon" />
+                                        </span>
+                                        <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
+                                            class="charger-separator">&amp;</span>
+                                    </span>
+                                </span>
+                            </p>
+                        </div>
                     </div>
-                </div>
+
+                    <!-- Inline Details Drawer on Mobile Screens -->
+                    <div v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
+                        class="expanded-detail-pane mobile-only-pane">
+                        <div class="expanded-pane-header">
+                            <h2>{{ activeVehicle.modelYear }} {{ activeVehicle.manufacturer }} {{ activeVehicle.model }}
+                            </h2>
+                            <button class="close-expanded-btn" @click="closeSelectedVehicle"
+                                aria-label="Close details view">&times;</button>
+                        </div>
+                        <div class="specs-expanded-drawer">
+                            <div class="hero-specs-dashboard">
+                                <div class="hero-meta-block">
+                                    <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
+                                    <span class="hero-subtitle-text">{{ activeVehicle.driveAxle }} &bull; {{
+                                        activeVehicle.vehicleType }}</span>
+                                </div>
+                                <div class="hero-metrics-row">
+                                    <div class="hero-metric-card highlight-range">
+                                        <span class="hero-value">{{ activeVehicle.epaCombinedRangeMi || '—' }}<span
+                                                class="hero-value-unit">mi</span></span>
+                                        <span class="hero-label">EPA Rated Range</span>
+                                    </div>
+                                    <div class="hero-metric-card highlight-battery">
+                                        <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
+                                                class="hero-value-unit">kWh</span></span>
+                                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
+                                        }})</span>
+                                    </div>
+                                    <div class="hero-metric-card highlight-speed">
+                                        <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
+                                                class="hero-value-unit">kW</span></span>
+                                        <span class="hero-label">Peak DC Charging Speed</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tabs-navigation-bar">
+                                <button v-for="tab in technicalCategories" :key="tab.id" type="button"
+                                    class="tab-nav-btn" :class="{ 'is-active-tab': activeTabId === tab.id }"
+                                    @click="activeTabId = tab.id">
+                                    {{ tab.title }}
+                                </button>
+                            </div>
+                            <div class="tab-content-panel">
+                                <div class="specs-matrix-grid">
+                                    <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
+                                        <span class="spec-label">{{ spec.label }}</span>
+                                        <span class="spec-value">{{ spec.val }}</span>
+                                    </div>
+
+                                    <div v-if="activeVehicleSpecs.length === 0" class="empty-tab-notice">
+                                        No secondary attributes mapped within this specification slice.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
                 <div v-if="filteredVehicles.length === 0" class="no-results">
                     No vehicles match your selected filters.
                 </div>
             </div>
 
-            <!-- Expanded Details Panel Side-by-Side on Desktop -->
-            <div v-if="selectedVehicleKey !== null && activeVehicle" class="expanded-detail-pane">
+            <!-- Expanded Details Panel Side-by-Side on Desktop Screens -->
+            <div v-if="selectedVehicleKey !== null && activeVehicle" class="expanded-detail-pane desktop-only-pane">
                 <div class="expanded-pane-header">
                     <h2>{{ activeVehicle.modelYear }} {{ activeVehicle.manufacturer }} {{ activeVehicle.model }}</h2>
                     <button class="close-expanded-btn" @click="closeSelectedVehicle"
@@ -669,7 +727,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                         class="hero-value-unit">kWh</span></span>
                                 <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                }})</span>
+                                    }})</span>
                             </div>
                             <div class="hero-metric-card highlight-speed">
                                 <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -770,6 +828,7 @@ const evaluateRowDifference = (label: string): boolean => {
     margin: 0 auto;
     padding: 0 16px;
     position: relative;
+    box-sizing: border-box;
 }
 
 .results-status-bar {
@@ -925,6 +984,7 @@ html.dark .compare-checkbox-label {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
+    min-width: 0;
 }
 
 .split-view-layout.has-expanded-card .grid-container {
@@ -942,6 +1002,7 @@ html.dark .compare-checkbox-label {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    box-sizing: border-box;
 }
 
 html.dark .grid-item {
@@ -978,11 +1039,32 @@ html.dark .grid-item.is-selected {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 20px;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 html.dark .expanded-detail-pane {
     background-color: #1e293b;
     border-color: #334155;
+}
+
+.mobile-only-pane {
+    display: block;
+    margin-top: 8px;
+}
+
+.desktop-only-pane {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .mobile-only-pane {
+        display: none;
+    }
+
+    .desktop-only-pane {
+        display: block;
+    }
 }
 
 .expanded-pane-header {
@@ -1197,23 +1279,29 @@ html.dark .hero-subtitle-text {
 
 .hero-metrics-row {
     display: flex;
-    gap: 40px;
+    gap: 16px;
     flex-wrap: wrap;
 }
 
 .hero-metric-card {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-width: 160px;
+    flex: 1 1 120px;
+    min-width: 0;
 }
 
 .hero-value {
-    font-size: 36px;
+    font-size: 28px;
     font-weight: 800;
     letter-spacing: -0.03em;
     color: #0f172a;
     line-height: 1;
+}
+
+@media (min-width: 640px) {
+    .hero-value {
+        font-size: 36px;
+    }
 }
 
 html.dark .hero-value {
@@ -1221,7 +1309,7 @@ html.dark .hero-value {
 }
 
 .hero-value-unit {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     letter-spacing: normal;
     color: #64748b;
@@ -1233,7 +1321,7 @@ html.dark .hero-value-unit {
 }
 
 .hero-label {
-    font-size: 12px;
+    font-size: 11px;
     color: #64748b;
     margin-top: 6px;
     font-weight: 600;
@@ -1291,8 +1379,8 @@ html.dark .tabs-navigation-bar {
 .tab-nav-btn {
     background: transparent;
     border: none;
-    padding: 10px 18px;
-    font-size: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #64748b;
     cursor: pointer;
@@ -1332,8 +1420,8 @@ html.dark .tab-nav-btn.is-active-tab {
 
 .specs-matrix-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px 48px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px 24px;
 }
 
 .spec-matrix-row {
@@ -1342,6 +1430,7 @@ html.dark .tab-nav-btn.is-active-tab {
     gap: 4px;
     border-bottom: 1px solid #f1f5f9;
     padding-bottom: 8px;
+    min-width: 0;
 }
 
 html.dark .spec-matrix-row {
@@ -1350,7 +1439,7 @@ html.dark .spec-matrix-row {
 
 .spec-label {
     color: #64748b;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -1362,7 +1451,7 @@ html.dark .spec-label {
 
 .spec-value {
     color: #1e293b;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     word-break: break-word;
 }
@@ -1456,7 +1545,7 @@ html.dark .tooltip-wrapper::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 16px;
 }
 
 html.dark .compare-modal-overlay {
