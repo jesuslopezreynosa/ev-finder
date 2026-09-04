@@ -95,6 +95,7 @@ const props = defineProps<{
     vehicles: Vehicle[];
 }>();
 
+// Converts ISO Alpha-3 codes (e.g., "USA") to full localized display names ("United States")
 const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     if (!alpha3Code) return '';
     const cleaned = String(alpha3Code).trim().toUpperCase();
@@ -106,6 +107,7 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
+// Normalizes port input (string or array) into a flat array of clean port names
 const getChargingPortsArray = (portValue: any): string[] => {
     if (!portValue) return [];
 
@@ -121,12 +123,14 @@ const getChargingPortsArray = (portValue: any): string[] => {
         .filter(Boolean);
 };
 
+// Dynamically resolves local SVG assets based on port string names
 const getChargingPortIconUrl = (portName: string): string => {
     if (!portName) return '';
     const filename = portName.toLowerCase().replace(/[\s-]/g, '');
     return new URL(`./assets/icons/${filename}.svg`, import.meta.url).href;
 };
 
+// Aggregates unique values across dataset to populate dropdown filter options dynamically
 const dynamicFilterOptions = computed(() => {
     const stringCategories = [
         'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
@@ -168,6 +172,7 @@ const dynamicFilterOptions = computed(() => {
     return optionsMap;
 });
 
+// Computes min/max numerical bounds across all vehicles to initialize slider controls
 const dataBounds = computed(() => {
     const modelYears = props.vehicles.map(v => Number(v.modelYear)).filter(y => !isNaN(y) && y > 0);
     const epaRanges = props.vehicles.map(v => Number(v.epaCombinedRangeMi)).filter(r => !isNaN(r) && r > 0);
@@ -205,6 +210,7 @@ type CategoryId = (typeof technicalCategories)[number]['id'];
 
 const activeTabId = ref<CategoryId>(technicalCategories[0].id);
 
+// Maps category tab IDs to specific Vehicle interface keys for grid filtering
 const categoryMappings: Record<CategoryId, string[]> = {
     chargingPerformance: [
         'epaCombEfficiencyKwh100mi', 'epaCombEfficiencyWhMi', 'epaCombinedRangeMi',
@@ -273,6 +279,7 @@ const activeVehicleSpecs = computed(() => {
     return getFilteredSpecs(activeVehicle.value, activeTabId.value);
 });
 
+// Transforms camelCase key properties into human-readable UI labels with units
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
     const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
@@ -282,6 +289,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         .map(([key, value]) => {
             let label = key;
 
+            // Split camelCase and separate numbers from text
             label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
             label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
             label = label.replace(/^./, str => str.toUpperCase());
@@ -290,6 +298,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
             label = label.replace(/\s+/g, ' ').trim();
 
+            // Re-capitalize industry acronyms
             acronyms.forEach(acronym => {
                 const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
                 label = label.replace(regex, acronym.toUpperCase());
@@ -299,6 +308,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
             label = label.replace(/\bAnd\b/g, '&');
 
+            // Format trailing technical unit suffixes into parenthetical expressions
             const unitReplacements: Record<string, string> = {
                 'KWH 100 MI': '(kWh / 100mi)',
                 'WH MI': '(Wh/mi)',
@@ -332,6 +342,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         });
 };
 
+// Normalizes mixed feature values (booleans, numbers, strings) to a boolean evaluation
 const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
 
@@ -361,6 +372,7 @@ const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     }
 };
 
+// Evaluates active filter criteria against every vehicle entry
 const filteredVehicles = computed(() => {
     if (!currentFilters.value) return props.vehicles;
 
@@ -410,6 +422,7 @@ const filteredVehicles = computed(() => {
 
             let vehicleValue = vehicle[key];
 
+            // Fallback strategy: match keys with variation in prefix naming
             if (vehicleValue === undefined) {
                 const lowKey = key.toLowerCase();
                 const cleanLowKey = lowKey.replace(/^(has|support|supports)/, '');
@@ -440,6 +453,7 @@ const filteredVehicles = computed(() => {
     });
 });
 
+// Generates a composite fallback ID key if the vehicle lacks a primary ID property
 const getVehicleKey = (v: Vehicle): string => {
     if (v.id) return String(v.id);
     const keyParts = [
@@ -501,6 +515,7 @@ const topCompareBarRef = ref<HTMLElement | null>(null);
 const isTopBarVisible = ref<boolean>(true);
 let observer: IntersectionObserver | null = null;
 
+// Tracks visibility of top bar to show/hide the floating compare button when scrolling down
 onMounted(() => {
     if ('IntersectionObserver' in window) {
         observer = new IntersectionObserver(([entry]) => {
@@ -531,6 +546,7 @@ interface ComparisonCategory {
 
 const highlightDifferences = ref<boolean>(true);
 
+// Groups comparison specifications by category, excluding keys not present in chosen vehicles
 const comparisonCategories = computed<ComparisonCategory[]>(() => {
     if (comparisonRegistry.value.size === 0) return [];
 
@@ -565,6 +581,7 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     return result;
 });
 
+// Checks if values across all compared vehicles differ for a given spec key row
 const evaluateRowDifference = (label: string): boolean => {
     const vehicles = selectedForComparison.value;
     if (vehicles.length <= 1) return false;
@@ -666,7 +683,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                         <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                                 class="hero-value-unit">kWh</span></span>
                                         <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                            }})</span>
+                                        }})</span>
                                     </div>
                                     <div class="hero-metric-card highlight-speed">
                                         <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -726,7 +743,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                         class="hero-value-unit">kWh</span></span>
                                 <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                }})</span>
+                                    }})</span>
                             </div>
                             <div class="hero-metric-card highlight-speed">
                                 <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -1002,6 +1019,7 @@ html.dark .compare-checkbox-label {
     min-width: 0;
     box-sizing: border-box;
     position: relative;
+    /* Low explicit z-index prevents stacking leaks over overlays */
     z-index: 1;
 }
 
@@ -1049,6 +1067,7 @@ html.dark .expanded-detail-pane {
     border-color: #334155;
 }
 
+/* Higher stacking context prevents inline card overlays from clipping behind sibling grid items */
 .mobile-only-pane {
     display: block;
     margin-top: 8px;
@@ -1487,6 +1506,7 @@ html.dark .spec-value {
     align-items: center;
 }
 
+/* Pseudo-element tooltips dynamically styled via data-tooltip attribute */
 .tooltip-wrapper::after {
     content: attr(data-tooltip);
     position: absolute;
