@@ -106,7 +106,6 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
-// Converts the charging port name into an array, splitting comma-separated strings
 const getChargingPortsArray = (portValue: any): string[] => {
     if (!portValue) return [];
 
@@ -667,7 +666,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                         <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                                 class="hero-value-unit">kWh</span></span>
                                         <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                        }})</span>
+                                            }})</span>
                                     </div>
                                     <div class="hero-metric-card highlight-speed">
                                         <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -727,7 +726,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                         class="hero-value-unit">kWh</span></span>
                                 <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                    }})</span>
+                                }})</span>
                             </div>
                             <div class="hero-metric-card highlight-speed">
                                 <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
@@ -908,7 +907,6 @@ html.dark .compare-clear-btn {
     border-color: #475569;
 }
 
-/* Floating Compare Action Bar */
 .floating-compare-bar {
     position: fixed;
     bottom: 24px;
@@ -1003,6 +1001,8 @@ html.dark .compare-checkbox-label {
     flex-direction: column;
     min-width: 0;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
 }
 
 html.dark .grid-item {
@@ -1015,6 +1015,7 @@ html.dark .grid-item {
     border-color: #cbd5e1;
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    z-index: 2;
 }
 
 html.dark .grid-item:hover {
@@ -1024,6 +1025,7 @@ html.dark .grid-item:hover {
 .grid-item.is-selected {
     border-color: #2563eb;
     box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1), 0 8px 10px -6px rgba(37, 99, 235, 0.05);
+    z-index: 3;
 }
 
 html.dark .grid-item.is-selected {
@@ -1037,8 +1039,7 @@ html.dark .grid-item.is-selected {
     border-radius: 12px;
     padding: 24px;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    position: sticky;
-    top: 20px;
+    position: relative;
     min-width: 0;
     box-sizing: border-box;
 }
@@ -1051,10 +1052,14 @@ html.dark .expanded-detail-pane {
 .mobile-only-pane {
     display: block;
     margin-top: 8px;
+    z-index: 20;
 }
 
 .desktop-only-pane {
     display: none;
+    position: sticky;
+    top: 20px;
+    z-index: 10;
 }
 
 @media (min-width: 1024px) {
@@ -1497,7 +1502,7 @@ html.dark .spec-value {
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: opacity 0.15s ease;
 }
@@ -1519,7 +1524,7 @@ html.dark .tooltip-wrapper::after {
     border-color: #1e293b transparent transparent transparent;
     opacity: 0;
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
     transition: opacity 0.15s ease;
 }
 
@@ -1532,7 +1537,6 @@ html.dark .tooltip-wrapper::before {
     opacity: 1;
 }
 
-/* Modal Styling */
 .compare-modal-overlay {
     position: fixed;
     top: 0;
