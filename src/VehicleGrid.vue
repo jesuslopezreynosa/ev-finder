@@ -62,7 +62,7 @@ export interface Vehicle {
     frunkCapacityL: number | null;
     voltageArchitecture: string | null;
     maxSupportedDcChargingVoltage: string | null;
-    batteryNominalVoltage: string | null;
+    batteryNominalVoltage: string | number | null;
     supportsV2x: string | null;
     seatCount: number | string | null;
     hasPetMode: string | null;
@@ -206,35 +206,37 @@ const technicalCategories = [
     { id: 'dimensions', title: 'Dimensions' },
 ] as const;
 
-const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology'>('chargingPerformance');
+type CategoryId = (typeof technicalCategories)[number]['id'];
 
-const categoryMappings: Record<string, string[]> = {
+const activeTabId = ref<CategoryId>(technicalCategories[0].id);
+
+const categoryMappings: Record<CategoryId, string[]> = {
     chargingPerformance: [
-        'epacombefficiencykwh100mi', 'epacombefficiencywhmi', 'epacombinedrangemi',
-        'typicalfullrangemi', 'netbatterycapacitykwh', 'batterychemistry',
-        'recommendeddailychargepercent', 'chargingports', 'dcchargingspeedkw',
-        'onboardchargeramps', 'supportsac277vcharging', 'supportsbatterypreconditioning',
-        'supportssuperchargeraccess', 'supportsplugandchargeiso15118', 'plugandchargeproviders',
-        'voltagearchitecture', 'maxsupporteddcchargingvoltage', 'batterynominalvoltage',
-        'supportsv2x', 'towingcapacity', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTime'
+        'epaCombEfficiencyKwh100mi', 'epaCombEfficiencyWhMi', 'epaCombinedRangeMi',
+        'typicalFullRangeMi', 'netBatteryCapacityKwh', 'batteryChemistry',
+        'recommendedDailyChargePercent', 'chargingPorts', 'dcChargingSpeedKw',
+        'onboardChargerAmps', 'supportsAc277vCharging', 'supportsBatteryPreconditioning',
+        'supportsSuperchargerAccess', 'supportsPlugAndChargeIso15118', 'plugAndChargeProviders',
+        'voltageArchitecture', 'maxSupportedDcChargingVoltage', 'batteryNominalVoltage',
+        'supportsV2x', 'towingCapacity', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTime'
     ],
     marketWarranty: [
-        'vehicletype', 'market', 'countryofassembly', 'vehiclewarranty',
-        'corrosionwarranty', 'batterydriveunitwarranty'
+        'vehicleType', 'market', 'countryOfAssembly', 'vehicleWarranty',
+        'corrosionWarranty', 'batteryDriveUnitWarranty'
     ],
     features: [
         'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasPersistentOnePedalDrive',
-        'hasadaptivecruisecontrol', 'hasglassroof', 'haspoweredseats',
-        'hasventilatedseats', 'hasheatedseats', 'hasheatedsteeringwheel',
-        'hasheatpump', 'hasgaragedooropener', 'frunkcapacityl', 'seatcount',
-        'standardseatmaterial', 'haspetmode', 'haspoweredsidemirrors', 'usbPorts'
+        'hasAdaptiveCruiseControl', 'hasGlassRoof', 'hasPoweredSeats',
+        'hasVentilatedSeats', 'hasHeatedSeats', 'hasHeatedSteeringWheel',
+        'hasHeatPump', 'hasGarageDoorOpener', 'frunkCapacityL', 'seatCount',
+        'standardSeatMaterial', 'hasPetMode', 'hasPoweredSideMirrors', 'usbPorts'
     ],
     infotainmentTechnology: [
-        'supportsphoneasakey', 'maxphonekeys', 'soundpowerwatts', 'speakercount',
-        'subwoofercount', 'sounddolbyatmos', 'soundsystembrand', 'supportscarplayandroidauto',
-        'infotainmentos', 'infotainmentscreensizein', 'navigationprovider', 'supportsota',
-        'hasuserprofiles', 'hasseatmirrorperprofile', 'hasbuiltindashcam',
-        'exteriorcameracount', 'interiorcameracount', 'drivercameratype', 'exteriorsensors'
+        'supportsPhoneAsAKey', 'maxPhoneKeys', 'soundPowerWatts', 'speakerCount',
+        'subwooferCount', 'soundDolbyAtmos', 'soundSystemBrand', 'supportsCarPlayAndroidAuto',
+        'infotainmentOs', 'infotainmentScreenSizeIn', 'navigationProvider', 'supportsOta',
+        'hasUserProfiles', 'hasSeatMirrorPerProfile', 'hasBuiltInDashcam',
+        'exteriorCameraCount', 'interiorCameraCount', 'driverCameraType', 'exteriorSensors'
     ],
     connectivitySubscriptions: [
         'includedConnectivityFeatures', 'optionalConnectivityFeatures', 'requiredFeatureSubscriptions', 'optionalSubscriptions'
@@ -245,9 +247,9 @@ const categoryMappings: Record<string, string[]> = {
     ]
 };
 
-const getFilteredSpecs = (vehicle: Vehicle, tabId: 'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology') => {
+const getFilteredSpecs = (vehicle: Vehicle, tabId: CategoryId) => {
     const rawSpecs = formatDisplaySpecs(vehicle);
-    const targets = categoryMappings[tabId] || [];
+    const targets = (categoryMappings[tabId] || []).map(k => k.toLowerCase());
     return rawSpecs.filter(spec =>
         targets.includes(spec.originalKey.toLowerCase())
     );
@@ -262,12 +264,19 @@ const toggleSelectVehicle = (vehicle: Vehicle) => {
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
 };
 
+const closeSelectedVehicle = () => {
+    selectedVehicleKey.value = null;
+};
+
 // Cache evaluation of technical specifications for the active vehicle
+const activeVehicle = computed(() => {
+    if (!selectedVehicleKey.value) return null;
+    return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
+});
+
 const activeVehicleSpecs = computed(() => {
-    if (!selectedVehicleKey.value) return [];
-    const vehicle = props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value);
-    if (!vehicle) return [];
-    return getFilteredSpecs(vehicle, activeTabId.value);
+    if (!activeVehicle.value) return [];
+    return getFilteredSpecs(activeVehicle.value, activeTabId.value);
 });
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
@@ -454,9 +463,6 @@ const filteredVehicles = computed(() => {
 });
 
 // Unique Vehicle Composite Identifier
-const vehicleKeyMap = new WeakMap<Vehicle, string>();
-let vehicleIdCounter = 0;
-
 const getVehicleKey = (v: Vehicle): string => {
     return `${v.modelYear}-${String(v.manufacturer).trim()}-${String(v.model).trim()}-${String(v.trim).trim()}-${v.driveAxle || ''}-${v.market || ''}`;
 };
@@ -496,18 +502,6 @@ const openCompareModal = (): void => {
 const closeCompareModal = (): void => {
     isCompareModalOpen.value = false;
 };
-
-const comparisonKeys = computed(() => {
-    if (selectedForComparison.value.length === 0) return [];
-
-    const keysSet = new Set<string>();
-    selectedForComparison.value.forEach(vehicle => {
-        formatDisplaySpecs(vehicle).forEach(spec => {
-            keysSet.add(spec.label);
-        });
-    });
-    return Array.from(keysSet).sort((a, b) => a.localeCompare(b));
-});
 
 const getSpecValueByLabel = (vehicle: Vehicle, label: string) => {
     const specs = formatDisplaySpecs(vehicle);
@@ -566,7 +560,7 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     const result: ComparisonCategory[] = [];
 
     technicalCategories.forEach(category => {
-        const categoryOriginalKeys = categoryMappings[category.id] || [];
+        const categoryOriginalKeys = (categoryMappings[category.id] || []).map(k => k.toLowerCase());
         const matchedLabels = Array.from(keysSet).filter(label => {
             const originalKey = originalKeysMap.get(label);
             return originalKey && categoryOriginalKeys.includes(originalKey);
@@ -615,65 +609,82 @@ const evaluateRowDifference = (label: string): boolean => {
                 </button>
             </div>
         </div>
-        <div class="grid-container">
-            <div v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
-                :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                @click="toggleSelectVehicle(vehicle)">
-                <div class="card-header-actions" @click.stop>
-                    <label class="compare-checkbox-label">
-                        <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
-                            :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                            @change="toggleCompareVehicle(vehicle)" />
-                        <span>Compare</span>
-                    </label>
-                </div>
-                <div class="card-main-meta">
-                    <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
-                    <p v-if="selectedVehicleKey !== getVehicleKey(vehicle)" class="trim-drivetrain-line"> <strong>{{
-                        vehicle.trim }}</strong>
-                        <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
-                        <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                            <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
-                        </span>
-                        <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
-                    </p>
-                    <p v-if="selectedVehicleKey !== getVehicleKey(vehicle)" class="specs-preview-summary"> <span>{{
-                        vehicle.vehicleType }}</span>
-                        <span class="summary-bullet">&bull;</span>
-                        <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
-                        <span class="summary-bullet">&bull;</span>
-                        <span class="inline-charger-container">
-                            <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)" :key="port"
-                                class="inline-charger-item">
-                                <span :data-tooltip="port" class="tooltip-wrapper">
-                                    <img :src="getChargingPortIconUrl(port)" :alt="port" class="charger-inline-icon" />
-                                </span>
-                                <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
-                                    class="charger-separator">&amp;</span>
+
+        <div class="split-view-layout" :class="{ 'has-expanded-card': selectedVehicleKey !== null }">
+            <div class="grid-container">
+                <div v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)" class="grid-item"
+                    :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
+                    @click="toggleSelectVehicle(vehicle)">
+                    <div class="card-header-actions" @click.stop>
+                        <label class="compare-checkbox-label">
+                            <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
+                                :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
+                                @change="toggleCompareVehicle(vehicle)" />
+                            <span>Compare</span>
+                        </label>
+                    </div>
+                    <div class="card-main-meta">
+                        <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
+                        <p class="trim-drivetrain-line">
+                            <strong>{{ vehicle.trim }}</strong>
+                            <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
+                            <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
+                                <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
                             </span>
-                        </span>
-                    </p>
+                            <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
+                        </p>
+                        <p class="specs-preview-summary">
+                            <span>{{ vehicle.vehicleType }}</span>
+                            <span class="summary-bullet">&bull;</span>
+                            <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
+                            <span class="summary-bullet">&bull;</span>
+                            <span class="inline-charger-container">
+                                <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)" :key="port"
+                                    class="inline-charger-item">
+                                    <span :data-tooltip="port" class="tooltip-wrapper">
+                                        <img :src="getChargingPortIconUrl(port)" :alt="port"
+                                            class="charger-inline-icon" />
+                                    </span>
+                                    <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
+                                        class="charger-separator">&amp;</span>
+                                </span>
+                            </span>
+                        </p>
+                    </div>
                 </div>
-                <div v-if="selectedVehicleKey === getVehicleKey(vehicle)" class="specs-expanded-drawer" @click.stop>
+                <div v-if="filteredVehicles.length === 0" class="no-results">
+                    No vehicles match your selected filters.
+                </div>
+            </div>
+
+            <!-- Expanded Details Panel Side-by-Side on Desktop -->
+            <div v-if="selectedVehicleKey !== null && activeVehicle" class="expanded-detail-pane">
+                <div class="expanded-pane-header">
+                    <h2>{{ activeVehicle.modelYear }} {{ activeVehicle.manufacturer }} {{ activeVehicle.model }}</h2>
+                    <button class="close-expanded-btn" @click="closeSelectedVehicle"
+                        aria-label="Close details view">&times;</button>
+                </div>
+                <div class="specs-expanded-drawer">
                     <div class="hero-specs-dashboard">
                         <div class="hero-meta-block">
-                            <span class="hero-subtitle-pill">{{ vehicle.trim }}</span>
-                            <span class="hero-subtitle-text">{{ vehicle.driveAxle }} &bull; {{ vehicle.vehicleType
-                            }}</span>
+                            <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
+                            <span class="hero-subtitle-text">{{ activeVehicle.driveAxle }} &bull; {{
+                                activeVehicle.vehicleType }}</span>
                         </div>
                         <div class="hero-metrics-row">
                             <div class="hero-metric-card highlight-range">
-                                <span class="hero-value">{{ vehicle.epaCombinedRangeMi || '—' }}<span
+                                <span class="hero-value">{{ activeVehicle.epaCombinedRangeMi || '—' }}<span
                                         class="hero-value-unit">mi</span></span>
                                 <span class="hero-label">EPA Rated Range</span>
                             </div>
                             <div class="hero-metric-card highlight-battery">
-                                <span class="hero-value">{{ vehicle.netBatteryCapacityKwh || '—' }}<span
+                                <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
                                         class="hero-value-unit">kWh</span></span>
-                                <span class="hero-label">Net Capacity ({{ vehicle.batteryChemistry || '' }})</span>
+                                <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
+                                    }})</span>
                             </div>
                             <div class="hero-metric-card highlight-speed">
-                                <span class="hero-value">{{ vehicle.dcChargingSpeedKw || '—' }}<span
+                                <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
                                         class="hero-value-unit">kW</span></span>
                                 <span class="hero-label">Peak DC Charging Speed</span>
                             </div>
@@ -698,9 +709,6 @@ const evaluateRowDifference = (label: string): boolean => {
                         </div>
                     </div>
                 </div>
-            </div>
-            <div v-if="filteredVehicles.length === 0" class="no-results">
-                No vehicles match your selected filters.
             </div>
         </div>
 
@@ -911,11 +919,28 @@ html.dark .compare-checkbox-label {
     color: #94a3b8;
 }
 
+.split-view-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-top: 16px;
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .split-view-layout.has-expanded-card {
+        grid-template-columns: 1fr 2fr;
+    }
+}
+
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
-    margin-top: 16px;
+}
+
+.split-view-layout.has-expanded-card .grid-container {
+    grid-template-columns: 1fr;
 }
 
 .grid-item {
@@ -949,13 +974,63 @@ html.dark .grid-item:hover {
 .grid-item.is-selected {
     border-color: #2563eb;
     box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1), 0 8px 10px -6px rgba(37, 99, 235, 0.05);
-    grid-column: 1 / -1;
-    cursor: default;
 }
 
 html.dark .grid-item.is-selected {
     border-color: #38bdf8;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.expanded-detail-pane {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 20px;
+}
+
+html.dark .expanded-detail-pane {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+.expanded-pane-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+html.dark .expanded-pane-header {
+    border-bottom-color: #334155;
+}
+
+.expanded-pane-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+html.dark .expanded-pane-header h2 {
+    color: #ffffff;
+}
+
+.close-expanded-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+}
+
+html.dark .close-expanded-btn {
+    color: #cbd5e1;
 }
 
 .grid-item h3 {
@@ -1082,7 +1157,6 @@ html.dark .charger-inline-icon {
 }
 
 .specs-expanded-drawer {
-    margin-top: 20px;
     display: flex;
     flex-direction: column;
     gap: 24px;
