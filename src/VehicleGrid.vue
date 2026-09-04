@@ -74,6 +74,20 @@ export interface Vehicle {
     batteryDriveUnitWarranty: string | null;
     corrosionWarranty: string | null;
     towingCapacity: string | null;
+    usbPorts: string | null;
+    includedConnectivityFeatures: string | null;
+    optionalConnectivityFeatures: string | null;
+    requiredFeatureSubscriptions: string | null;
+    optionalSubscriptions: string | null;
+    heightInches: number | null;
+    widthInches: number | null;
+    lengthInches: number | null;
+    groundClearanceInches: number | null;
+    grossWeightPounds: number | null;
+    powerHorsepower: number | null;
+    torqueFootPounds: number | null;
+    zeroToSixtyTime: number | null;
+    turningRadiusFeet: number | null;
     [key: string]: any;
 }
 
@@ -183,16 +197,18 @@ const dataBounds = computed(() => {
 const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
 
-const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology'>('chargingPerformance');
-
 const technicalCategories = [
     { id: 'chargingPerformance', title: 'Charging & Performance' },
     { id: 'features', title: 'Features' },
     { id: 'infotainmentTechnology', title: 'Infotainment & Technology' },
-    { id: 'marketWarranty', title: 'Market & Warranty' }
+    { id: 'marketWarranty', title: 'Market & Warranty' },
+    { id: 'connectivitySubscriptions', title: 'Connectivity & Subscriptions' },
+    { id: 'dimensions', title: 'Dimensions' },
 ] as const;
 
-const domainMappings: Record<string, string[]> = {
+const activeTabId = ref<'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology'>('chargingPerformance');
+
+const categoryMappings: Record<string, string[]> = {
     chargingPerformance: [
         'epacombefficiencykwh100mi', 'epacombefficiencywhmi', 'epacombinedrangemi',
         'typicalfullrangemi', 'netbatterycapacitykwh', 'batterychemistry',
@@ -200,18 +216,18 @@ const domainMappings: Record<string, string[]> = {
         'onboardchargeramps', 'supportsac277vcharging', 'supportsbatterypreconditioning',
         'supportssuperchargeraccess', 'supportsplugandchargeiso15118', 'plugandchargeproviders',
         'voltagearchitecture', 'maxsupporteddcchargingvoltage', 'batterynominalvoltage',
-        'supportsv2x', 'towingcapacity'
+        'supportsv2x', 'towingcapacity', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTime'
     ],
     marketWarranty: [
         'vehicletype', 'market', 'countryofassembly', 'vehiclewarranty',
         'corrosionwarranty', 'batterydriveunitwarranty'
     ],
     features: [
-        'haspoweredliftgate', 'hasonepedaldrive', 'haspersistentonepedaldrive',
+        'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasPersistentOnePedalDrive',
         'hasadaptivecruisecontrol', 'hasglassroof', 'haspoweredseats',
         'hasventilatedseats', 'hasheatedseats', 'hasheatedsteeringwheel',
         'hasheatpump', 'hasgaragedooropener', 'frunkcapacityl', 'seatcount',
-        'standardseatmaterial', 'haspetmode', 'haspoweredsidemirrors'
+        'standardseatmaterial', 'haspetmode', 'haspoweredsidemirrors', 'usbPorts'
     ],
     infotainmentTechnology: [
         'supportsphoneasakey', 'maxphonekeys', 'soundpowerwatts', 'speakercount',
@@ -219,12 +235,19 @@ const domainMappings: Record<string, string[]> = {
         'infotainmentos', 'infotainmentscreensizein', 'navigationprovider', 'supportsota',
         'hasuserprofiles', 'hasseatmirrorperprofile', 'hasbuiltindashcam',
         'exteriorcameracount', 'interiorcameracount', 'drivercameratype', 'exteriorsensors'
+    ],
+    connectivitySubscriptions: [
+        'includedConnectivityFeatures', 'optionalConnectivityFeatures', 'requiredFeatureSubscriptions', 'optionalSubscriptions'
+    ],
+    dimensions: [
+        'heightInches', 'widthInches', 'lengthInches', 'groundClearanceInches',
+        'grossWeightPounds', 'turningRadiusFeet'
     ]
 };
 
 const getFilteredSpecs = (vehicle: Vehicle, tabId: 'chargingPerformance' | 'marketWarranty' | 'features' | 'infotainmentTechnology') => {
     const rawSpecs = formatDisplaySpecs(vehicle);
-    const targets = domainMappings[tabId] || [];
+    const targets = categoryMappings[tabId] || [];
     return rawSpecs.filter(spec =>
         targets.includes(spec.originalKey.toLowerCase())
     );
@@ -543,7 +566,7 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     const result: ComparisonCategory[] = [];
 
     technicalCategories.forEach(category => {
-        const categoryOriginalKeys = domainMappings[category.id] || [];
+        const categoryOriginalKeys = categoryMappings[category.id] || [];
         const matchedLabels = Array.from(keysSet).filter(label => {
             const originalKey = originalKeysMap.get(label);
             return originalKey && categoryOriginalKeys.includes(originalKey);
