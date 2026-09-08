@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 
 import EvData from '@/assets/ev-specs.json';
-
+import { useTheme } from '@/composables/useTheme';
 import VehicleGrid, { type Vehicle } from './VehicleGrid.vue';
 import Header from './Header.vue';
 import ArticleView from './ArticleView.vue';
+
+useTheme();
 
 // Track which layout or article is currently active
 const currentView = ref<string>('grid');
@@ -21,17 +23,6 @@ const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
         String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
         a.modelYear - b.modelYear
     );
-});
-
-onMounted(() => {
-    const isDark = localStorage.getItem('theme') === 'dark' ||
-        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    if (isDark) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
 });
 </script>
 

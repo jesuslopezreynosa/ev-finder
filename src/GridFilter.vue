@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount } from 'vue';
 
+import { useTheme } from '@/composables/useTheme';
+
 export interface FilterState {
     manufacturer: string[];
     driveAxle: string[];
@@ -89,29 +91,7 @@ const emitChange = defineEmits<{
     (e: 'filter-change', activeFilters: FilterState): void;
 }>();
 
-const isDarkModeActive = ref(false);
-
-const checkCurrentTheme = () => {
-    isDarkModeActive.value = document.documentElement.classList.contains('dark');
-};
-
-const toggleTheme = (): void => {
-    if (document.documentElement.classList.contains('dark')) {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    } else {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    }
-    checkCurrentTheme();
-};
-
-onMounted(() => {
-    checkCurrentTheme();
-
-    const observer = new MutationObserver(checkCurrentTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-});
+const { isDark, toggleTheme } = useTheme();
 
 const activePopoverKey = ref<string | null>(null);
 
@@ -148,7 +128,6 @@ const selectedFilters = ref({
     soundDolbyAtmos: null as boolean | null
 });
 
-// Normalizes arrays and extracts elements from comma-delimited list variables
 const normalizeListValues = (rawChoices: unknown): string[] => {
     if (!rawChoices) return [];
 
@@ -164,8 +143,7 @@ const normalizeListValues = (rawChoices: unknown): string[] => {
 };
 
 const stringFilterGroups = computed((): StringGroupConfig[] => {
-    // Dynamic fallback checking resolves property mismatches for keys like infotainmentOs
-    const infoOsChoices = props.options.infotainmentOs || props.options.infotainmentOs || [];
+    const infoOsChoices = props.options.infotainmentOs || [];
     const portsChoices = props.options.chargingPorts || [];
 
     return [
@@ -311,7 +289,7 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
             <div class="filter-actions-group">
                 <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
                 <button @click="toggleTheme" class="theme-toggle-btn" type="button" aria-label="Toggle Theme">
-                    <span>{{ isDarkModeActive ? '☀️' : '🌙' }}</span>
+                    <span>{{ isDark ? '☀️' : '🌙' }}</span>
                 </button>
             </div>
         </div>

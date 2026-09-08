@@ -4,6 +4,8 @@ import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
+import VehicleDetailPane from './components/VehicleDetailPane.vue';
+import VehicleCompareModal from './components/VehicleCompareModal.vue';
 
 countries.registerLocale(enLocale);
 
@@ -95,7 +97,17 @@ const props = defineProps<{
     vehicles: Vehicle[];
 }>();
 
-// Converts ISO Alpha-3 codes (e.g., "USA") to full localized display names ("United States")
+const iconModules = import.meta.glob('/src/assets/icons/*.svg', {
+    eager: true,
+    import: 'default'
+}) as Record<string, string>;
+
+const getChargingPortIconUrl = (portName: string): string => {
+    if (!portName) return '';
+    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
+    return iconModules[`/src/assets/icons/${filename}.svg`] || '';
+};
+
 const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     if (!alpha3Code) return '';
     const cleaned = String(alpha3Code).trim().toUpperCase();
@@ -107,30 +119,14 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
-// Normalizes port input (string or array) into a flat array of clean port names
 const getChargingPortsArray = (portValue: any): string[] => {
     if (!portValue) return [];
-
     if (Array.isArray(portValue)) {
-        return portValue.flatMap(p =>
-            String(p).split(',').map(item => item.trim())
-        ).filter(Boolean);
+        return portValue.flatMap(p => String(p).split(',').map(item => item.trim())).filter(Boolean);
     }
-
-    return String(portValue)
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean);
+    return String(portValue).split(',').map(item => item.trim()).filter(Boolean);
 };
 
-// Dynamically resolves local SVG assets based on port string names
-const getChargingPortIconUrl = (portName: string): string => {
-    if (!portName) return '';
-    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    return new URL(`./assets/icons/${filename}.svg`, import.meta.url).href;
-};
-
-// Aggregates unique values across dataset to populate dropdown filter options dynamically
 const dynamicFilterOptions = computed(() => {
     const stringCategories = [
         'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
@@ -156,9 +152,7 @@ const dynamicFilterOptions = computed(() => {
                 });
             } else if (key === 'countryOfAssembly') {
                 const fullCountryName = getCountryNameFromIsoAlphaThreeCode(String(val));
-                if (fullCountryName) {
-                    uniqueVals.add(fullCountryName);
-                }
+                if (fullCountryName) uniqueVals.add(fullCountryName);
             } else if (typeof val === 'string' && val.includes(',')) {
                 val.split(',').forEach(item => uniqueVals.add(item.trim()));
             } else {
@@ -172,7 +166,6 @@ const dynamicFilterOptions = computed(() => {
     return optionsMap;
 });
 
-// Computes min/max numerical bounds across all vehicles to initialize slider controls
 const dataBounds = computed(() => {
     const modelYears = props.vehicles.map(v => Number(v.modelYear)).filter(y => !isNaN(y) && y > 0);
     const epaRanges = props.vehicles.map(v => Number(v.epaCombinedRangeMi)).filter(r => !isNaN(r) && r > 0);
@@ -208,9 +201,8 @@ const technicalCategories = [
 
 type CategoryId = (typeof technicalCategories)[number]['id'];
 
-const activeTabId = ref<CategoryId>(technicalCategories[0].id);
+const activeTabId = ref<string>(technicalCategories[0].id);
 
-// Maps category tab IDs to specific Vehicle interface keys for grid filtering
 const categoryMappings: Record<CategoryId, string[]> = {
     chargingPerformance: [
         'epaCombEfficiencyKwh100mi', 'epaCombEfficiencyWhMi', 'epaCombinedRangeMi',
@@ -248,38 +240,6 @@ const categoryMappings: Record<CategoryId, string[]> = {
     ]
 };
 
-const getFilteredSpecs = (vehicle: Vehicle, tabId: CategoryId) => {
-    const rawSpecs = formatDisplaySpecs(vehicle);
-    const targets = (categoryMappings[tabId] || []).map(k => k.toLowerCase());
-    return rawSpecs.filter(spec =>
-        targets.includes(spec.originalKey.toLowerCase())
-    );
-};
-
-const updateFilters = (newFilters: FilterState) => {
-    currentFilters.value = { ...newFilters };
-};
-
-const toggleSelectVehicle = (vehicle: Vehicle) => {
-    const key = getVehicleKey(vehicle);
-    selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
-};
-
-const closeSelectedVehicle = () => {
-    selectedVehicleKey.value = null;
-};
-
-const activeVehicle = computed(() => {
-    if (!selectedVehicleKey.value) return null;
-    return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
-});
-
-const activeVehicleSpecs = computed(() => {
-    if (!activeVehicle.value) return [];
-    return getFilteredSpecs(activeVehicle.value, activeTabId.value);
-});
-
-// Transforms camelCase key properties into human-readable UI labels with units
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
     const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
@@ -288,17 +248,13 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         .filter(([key, value]) => !skipKeys.includes(key) && value !== null && value !== undefined && value !== '')
         .map(([key, value]) => {
             let label = key;
-
-            // Split camelCase and separate numbers from text
             label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
             label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
             label = label.replace(/^./, str => str.toUpperCase());
-
             label = label.replace(/([a-zA-Z])(\d+)/g, '$1 $2');
             label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
             label = label.replace(/\s+/g, ' ').trim();
 
-            // Re-capitalize industry acronyms
             acronyms.forEach(acronym => {
                 const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
                 label = label.replace(regex, acronym.toUpperCase());
@@ -308,7 +264,6 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
             label = label.replace(/\bAnd\b/g, '&');
 
-            // Format trailing technical unit suffixes into parenthetical expressions
             const unitReplacements: Record<string, string> = {
                 'KWH 100 MI': '(kWh / 100mi)',
                 'WH MI': '(Wh/mi)',
@@ -342,37 +297,33 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
         });
 };
 
-// Normalizes mixed feature values (booleans, numbers, strings) to a boolean evaluation
+const getFilteredSpecs = (vehicle: Vehicle, tabId: CategoryId) => {
+    const rawSpecs = formatDisplaySpecs(vehicle);
+    const targets = (categoryMappings[tabId] || []).map(k => k.toLowerCase());
+    return rawSpecs.filter(spec =>
+        targets.includes(spec.originalKey.toLowerCase())
+    );
+};
+
 const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
-
     if (typeof rawValue === 'boolean') return rawValue;
-
     if (typeof rawValue === 'number') return rawValue > 0;
 
     const cleanStr = String(rawValue).trim().toLowerCase();
-
-    if (cleanStr === 'yes' || cleanStr === 'true' || cleanStr === '1') {
-        return true;
-    }
-
-    if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') {
-        return false;
-    }
+    if (cleanStr === 'yes' || cleanStr === 'true' || cleanStr === '1') return true;
+    if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') return false;
 
     switch (key) {
         case 'hasAdaptiveCruiseControl':
             return !cleanStr.includes('no');
-
         case 'supportsCarPlayAndroidAuto':
             return cleanStr.includes('yes') || cleanStr.includes('true');
-
         default:
             return cleanStr.length > 0;
     }
 };
 
-// Evaluates active filter criteria against every vehicle entry
 const filteredVehicles = computed(() => {
     if (!currentFilters.value) return props.vehicles;
 
@@ -421,8 +372,6 @@ const filteredVehicles = computed(() => {
             if (filterVal === null || filterVal === undefined) return true;
 
             let vehicleValue = vehicle[key];
-
-            // Fallback strategy: match keys with variation in prefix naming
             if (vehicleValue === undefined) {
                 const lowKey = key.toLowerCase();
                 const cleanLowKey = lowKey.replace(/^(has|support|supports)/, '');
@@ -433,8 +382,7 @@ const filteredVehicles = computed(() => {
                 if (foundKey) vehicleValue = vehicle[foundKey];
             }
 
-            const isVehicleFeatureTrue = evaluateFeaturePresence(key, vehicleValue);
-            return isVehicleFeatureTrue === filterVal;
+            return evaluateFeaturePresence(key, vehicleValue) === filterVal;
         });
 
         const vehicleYear = Number(vehicle.modelYear);
@@ -453,7 +401,6 @@ const filteredVehicles = computed(() => {
     });
 });
 
-// Generates a composite fallback ID key if the vehicle lacks a primary ID property
 const getVehicleKey = (v: Vehicle): string => {
     if (v.id) return String(v.id);
     const keyParts = [
@@ -470,6 +417,29 @@ const getVehicleKey = (v: Vehicle): string => {
 
     return keyParts.filter(Boolean).join('-');
 };
+
+const updateFilters = (newFilters: FilterState) => {
+    currentFilters.value = { ...newFilters };
+};
+
+const toggleSelectVehicle = (vehicle: Vehicle) => {
+    const key = getVehicleKey(vehicle);
+    selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
+};
+
+const closeSelectedVehicle = () => {
+    selectedVehicleKey.value = null;
+};
+
+const activeVehicle = computed(() => {
+    if (!selectedVehicleKey.value) return null;
+    return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
+});
+
+const activeVehicleSpecs = computed(() => {
+    if (!activeVehicle.value) return [];
+    return getFilteredSpecs(activeVehicle.value, activeTabId.value as CategoryId);
+});
 
 const comparisonRegistry = ref<Map<string, Vehicle>>(new Map());
 
@@ -546,7 +516,6 @@ interface ComparisonCategory {
 
 const highlightDifferences = ref<boolean>(true);
 
-// Groups comparison specifications by category, excluding keys not present in chosen vehicles
 const comparisonCategories = computed<ComparisonCategory[]>(() => {
     if (comparisonRegistry.value.size === 0) return [];
 
@@ -563,7 +532,7 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     const result: ComparisonCategory[] = [];
 
     technicalCategories.forEach(category => {
-        const categoryOriginalKeys = (categoryMappings[category.id] || []).map(k => k.toLowerCase());
+        const categoryOriginalKeys = (categoryMappings[category.id as CategoryId] || []).map(k => k.toLowerCase());
         const matchedLabels = Array.from(keysSet).filter(label => {
             const originalKey = originalKeysMap.get(label);
             return originalKey && categoryOriginalKeys.includes(originalKey);
@@ -581,7 +550,6 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     return result;
 });
 
-// Checks if values across all compared vehicles differ for a given spec key row
 const evaluateRowDifference = (label: string): boolean => {
     const vehicles = selectedForComparison.value;
     if (vehicles.length <= 1) return false;
@@ -657,121 +625,22 @@ const evaluateRowDifference = (label: string): boolean => {
                         </div>
                     </div>
 
-                    <!-- Inline Details Drawer on Mobile Screens -->
-                    <div v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
-                        class="expanded-detail-pane mobile-only-pane">
-                        <div class="expanded-pane-header">
-                            <h2>{{ activeVehicle.modelYear }} {{ activeVehicle.manufacturer }} {{ activeVehicle.model }}
-                            </h2>
-                            <button class="close-expanded-btn" @click="closeSelectedVehicle"
-                                aria-label="Close details view">&times;</button>
-                        </div>
-                        <div class="specs-expanded-drawer">
-                            <div class="hero-specs-dashboard">
-                                <div class="hero-meta-block">
-                                    <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
-                                    <span class="hero-subtitle-text">{{ activeVehicle.driveAxle }} &bull; {{
-                                        activeVehicle.vehicleType }}</span>
-                                </div>
-                                <div class="hero-metrics-row">
-                                    <div class="hero-metric-card highlight-range">
-                                        <span class="hero-value">{{ activeVehicle.epaCombinedRangeMi || '—' }}<span
-                                                class="hero-value-unit">mi</span></span>
-                                        <span class="hero-label">EPA Rated Range</span>
-                                    </div>
-                                    <div class="hero-metric-card highlight-battery">
-                                        <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
-                                                class="hero-value-unit">kWh</span></span>
-                                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                        }})</span>
-                                    </div>
-                                    <div class="hero-metric-card highlight-speed">
-                                        <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
-                                                class="hero-value-unit">kW</span></span>
-                                        <span class="hero-label">Peak DC Charging Speed</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="tabs-navigation-bar">
-                                <button v-for="tab in technicalCategories" :key="tab.id" type="button"
-                                    class="tab-nav-btn" :class="{ 'is-active-tab': activeTabId === tab.id }"
-                                    @click="activeTabId = tab.id">
-                                    {{ tab.title }}
-                                </button>
-                            </div>
-                            <div class="tab-content-panel">
-                                <div class="specs-matrix-grid">
-                                    <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
-                                        <span class="spec-label">{{ spec.label }}</span>
-                                        <span class="spec-value">{{ spec.val }}</span>
-                                    </div>
-
-                                    <div v-if="activeVehicleSpecs.length === 0" class="empty-tab-notice">
-                                        No secondary attributes mapped within this specification slice.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Extracted Mobile Details Drawer Component -->
+                    <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
+                        class="mobile-only-pane" :active-vehicle="activeVehicle" :active-tab-id="activeTabId"
+                        :technical-categories="technicalCategories" :active-vehicle-specs="activeVehicleSpecs"
+                        @close="closeSelectedVehicle" @select-tab="(id) => (activeTabId = id)" />
                 </template>
                 <div v-if="filteredVehicles.length === 0" class="no-results">
                     No vehicles match your selected filters.
                 </div>
             </div>
 
-            <!-- Expanded Details Panel Side-by-Side on Desktop Screens -->
-            <div v-if="selectedVehicleKey !== null && activeVehicle" class="expanded-detail-pane desktop-only-pane">
-                <div class="expanded-pane-header">
-                    <h2>{{ activeVehicle.modelYear }} {{ activeVehicle.manufacturer }} {{ activeVehicle.model }}</h2>
-                    <button class="close-expanded-btn" @click="closeSelectedVehicle"
-                        aria-label="Close details view">&times;</button>
-                </div>
-                <div class="specs-expanded-drawer">
-                    <div class="hero-specs-dashboard">
-                        <div class="hero-meta-block">
-                            <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
-                            <span class="hero-subtitle-text">{{ activeVehicle.driveAxle }} &bull; {{
-                                activeVehicle.vehicleType }}</span>
-                        </div>
-                        <div class="hero-metrics-row">
-                            <div class="hero-metric-card highlight-range">
-                                <span class="hero-value">{{ activeVehicle.epaCombinedRangeMi || '—' }}<span
-                                        class="hero-value-unit">mi</span></span>
-                                <span class="hero-label">EPA Rated Range</span>
-                            </div>
-                            <div class="hero-metric-card highlight-battery">
-                                <span class="hero-value">{{ activeVehicle.netBatteryCapacityKwh || '—' }}<span
-                                        class="hero-value-unit">kWh</span></span>
-                                <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || ''
-                                    }})</span>
-                            </div>
-                            <div class="hero-metric-card highlight-speed">
-                                <span class="hero-value">{{ activeVehicle.dcChargingSpeedKw || '—' }}<span
-                                        class="hero-value-unit">kW</span></span>
-                                <span class="hero-label">Peak DC Charging Speed</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tabs-navigation-bar">
-                        <button v-for="tab in technicalCategories" :key="tab.id" type="button" class="tab-nav-btn"
-                            :class="{ 'is-active-tab': activeTabId === tab.id }" @click="activeTabId = tab.id">
-                            {{ tab.title }}
-                        </button>
-                    </div>
-                    <div class="tab-content-panel">
-                        <div class="specs-matrix-grid">
-                            <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
-                                <span class="spec-label">{{ spec.label }}</span>
-                                <span class="spec-value">{{ spec.val }}</span>
-                            </div>
-
-                            <div v-if="activeVehicleSpecs.length === 0" class="empty-tab-notice">
-                                No secondary attributes mapped within this specification slice.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Extracted Desktop Side-by-Side Panel Component -->
+            <VehicleDetailPane v-if="selectedVehicleKey !== null && activeVehicle" class="desktop-only-pane"
+                :active-vehicle="activeVehicle" :active-tab-id="activeTabId" :technical-categories="technicalCategories"
+                :active-vehicle-specs="activeVehicleSpecs" @close="closeSelectedVehicle"
+                @select-tab="(id) => (activeTabId = id)" />
         </div>
 
         <!-- Floating Compare CTA -->
@@ -787,53 +656,10 @@ const evaluateRowDifference = (label: string): boolean => {
             </div>
         </Transition>
 
-        <!-- Comparison Modal Overlay -->
-        <div v-if="isCompareModalOpen" class="compare-modal-overlay" @click.self="closeCompareModal">
-            <div class="compare-modal">
-                <div class="compare-modal-header">
-                    <h2>Vehicle Comparison Matrix</h2>
-                    <div class="compare-header-controls">
-                        <label class="toggle-differences-label">
-                            <input type="checkbox" v-model="highlightDifferences" />
-                            Highlight Differences
-                        </label>
-                        <button class="compare-close-btn" @click="closeCompareModal">&times;</button>
-                    </div>
-                </div>
-                <div class="compare-modal-body">
-                    <table class="compare-table">
-                        <thead>
-                            <tr>
-                                <th class="col-spec-header">Specification</th>
-                                <th v-for="v in selectedForComparison" :key="getVehicleKey(v)"
-                                    class="col-vehicle-header"
-                                    :style="{ width: `calc(80% / ${selectedForComparison.length})` }">
-                                    <div class="compare-column-header">
-                                        <button class="remove-v-btn" @click="toggleCompareVehicle(v)">&times;</button>
-                                        <strong>{{ v.modelYear }} {{ v.manufacturer }} {{ v.model }}</strong>
-                                        <span>{{ v.trim }}</span>
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody v-for="category in comparisonCategories" :key="category.id">
-                            <tr class="category-header-row">
-                                <td :colspan="selectedForComparison.length + 1">
-                                    <h3>{{ category.title }}</h3>
-                                </td>
-                            </tr>
-                            <tr v-for="keyLabel in category.keys" :key="keyLabel"
-                                :class="{ 'diff-highlight': highlightDifferences && evaluateRowDifference(keyLabel) }">
-                                <td class="compare-spec-key">{{ keyLabel }}</td>
-                                <td v-for="v in selectedForComparison" :key="getVehicleKey(v)">
-                                    {{ getSpecValueByLabel(v, keyLabel) }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <VehicleCompareModal :is-open="isCompareModalOpen" :selected-vehicles="selectedForComparison"
+            :categories="comparisonCategories" v-model:highlight-differences="highlightDifferences"
+            :get-spec-value-by-label="getSpecValueByLabel" :evaluate-row-difference="evaluateRowDifference"
+            @close="closeCompareModal" @toggle-compare="toggleCompareVehicle" />
     </div>
 </template>
 
@@ -1019,8 +845,8 @@ html.dark .compare-checkbox-label {
     min-width: 0;
     box-sizing: border-box;
     position: relative;
-    /* Low explicit z-index prevents stacking leaks over overlays */
     z-index: 1;
+    overflow: hidden;
 }
 
 html.dark .grid-item {
@@ -1051,23 +877,6 @@ html.dark .grid-item.is-selected {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
-.expanded-detail-pane {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    position: relative;
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-html.dark .expanded-detail-pane {
-    background-color: #1e293b;
-    border-color: #334155;
-}
-
-/* Higher stacking context prevents inline card overlays from clipping behind sibling grid items */
 .mobile-only-pane {
     display: block;
     margin-top: 8px;
@@ -1089,43 +898,6 @@ html.dark .expanded-detail-pane {
     .desktop-only-pane {
         display: block;
     }
-}
-
-.expanded-pane-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 12px;
-    margin-bottom: 16px;
-}
-
-html.dark .expanded-pane-header {
-    border-bottom-color: #334155;
-}
-
-.expanded-pane-header h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-html.dark .expanded-pane-header h2 {
-    color: #ffffff;
-}
-
-.close-expanded-btn {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #64748b;
-    line-height: 1;
-}
-
-html.dark .close-expanded-btn {
-    color: #cbd5e1;
 }
 
 .grid-item h3 {
@@ -1202,14 +974,43 @@ html.dark .battery-pill {
 }
 
 .specs-preview-summary {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
     font-size: 13px;
     color: #64748b;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.4;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.specs-matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.spec-matrix-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.spec-value {
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 600;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    /* Handles long strings like "Google built-in" gracefully */
 }
 
 html.dark .specs-preview-summary {
@@ -1252,247 +1053,6 @@ html.dark .charger-inline-icon {
     user-select: none;
 }
 
-.specs-expanded-drawer {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.hero-specs-dashboard {
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-}
-
-html.dark .hero-specs-dashboard {
-    background-color: #1e293b;
-    border-color: #334155;
-}
-
-.hero-meta-block {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.hero-subtitle-pill {
-    background: #e2e8f0;
-    color: #334155;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-html.dark .hero-subtitle-pill {
-    background: #475569;
-    color: #f1f5f9;
-}
-
-.hero-subtitle-text {
-    font-size: 13px;
-    color: #64748b;
-    font-weight: 500;
-}
-
-html.dark .hero-subtitle-text {
-    color: #94a3b8;
-}
-
-.hero-metrics-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.hero-metric-card {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 120px;
-    min-width: 0;
-}
-
-.hero-value {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: #0f172a;
-    line-height: 1;
-}
-
-@media (min-width: 640px) {
-    .hero-value {
-        font-size: 36px;
-    }
-}
-
-html.dark .hero-value {
-    color: #ffffff;
-}
-
-.hero-value-unit {
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: normal;
-    color: #64748b;
-    margin-left: 4px;
-}
-
-html.dark .hero-value-unit {
-    color: #94a3b8;
-}
-
-.hero-label {
-    font-size: 11px;
-    color: #64748b;
-    margin-top: 6px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-html.dark .hero-label {
-    color: #94a3b8;
-}
-
-.highlight-range .hero-value {
-    color: #2563eb;
-}
-
-html.dark .highlight-range .hero-value {
-    color: #38bdf8;
-}
-
-.highlight-battery .hero-value {
-    color: #166534;
-}
-
-html.dark .highlight-battery .hero-value {
-    color: #34d399;
-}
-
-.highlight-speed .hero-value {
-    color: #b45309;
-}
-
-html.dark .highlight-speed .hero-value {
-    color: #facc15;
-}
-
-.tabs-navigation-bar {
-    display: flex;
-    gap: 4px;
-    border-bottom: 2px solid #f1f5f9;
-    overflow-x: auto;
-    max-width: 100%;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-
-.tabs-navigation-bar::-webkit-scrollbar {
-    display: none;
-}
-
-html.dark .tabs-navigation-bar {
-    border-bottom-color: #334155;
-}
-
-.tab-nav-btn {
-    background: transparent;
-    border: none;
-    padding: 10px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-    position: relative;
-    bottom: -2px;
-    transition: all 0.15s ease;
-    border-bottom: 2px solid transparent;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-html.dark .tab-nav-btn {
-    color: #94a3b8;
-}
-
-.tab-nav-btn:hover {
-    color: #0f172a;
-}
-
-html.dark .tab-nav-btn:hover {
-    color: #ffffff;
-}
-
-.tab-nav-btn.is-active-tab {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
-}
-
-html.dark .tab-nav-btn.is-active-tab {
-    color: #38bdf8;
-    border-bottom-color: #38bdf8;
-}
-
-.tab-content-panel {
-    padding: 4px 0;
-}
-
-.specs-matrix-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px 24px;
-}
-
-.spec-matrix-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 8px;
-    min-width: 0;
-}
-
-html.dark .spec-matrix-row {
-    border-bottom-color: #1e293b;
-}
-
-.spec-label {
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-html.dark .spec-label {
-    color: #94a3b8;
-}
-
-.spec-value {
-    color: #1e293b;
-    font-size: 13px;
-    font-weight: 600;
-    word-break: break-word;
-}
-
-html.dark .spec-value {
-    color: #f1f5f9;
-}
-
-.empty-tab-notice {
-    grid-column: 1 / -1;
-    padding: 24px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-    font-style: italic;
-}
-
 .no-results {
     grid-column: 1 / -1;
     text-align: center;
@@ -1506,7 +1066,6 @@ html.dark .spec-value {
     align-items: center;
 }
 
-/* Pseudo-element tooltips dynamically styled via data-tooltip attribute */
 .tooltip-wrapper::after {
     content: attr(data-tooltip);
     position: absolute;

@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch } from 'vue';
 import MarkdownIt from 'markdown-it';
 import markdownItMathjax3 from 'markdown-it-mathjax3';
+
+import { useTheme } from '@/composables/useTheme';
 
 const props = defineProps<{
     title: string;
 }>();
 
+// Module-level instantiation for MarkdownIt
 const md = new MarkdownIt({
     html: true // Enable inline HTML
 }).use(markdownItMathjax3);
@@ -15,27 +18,13 @@ const articleHtml = ref<string>('');
 const isLoading = ref<boolean>(false);
 const hasError = ref<boolean>(false);
 
-const isDarkMode = ref<boolean>(false);
-let observer: MutationObserver | null = null;
+// Reactive dark mode state via centralized composable
+const { isDark } = useTheme();
 
 const modules = import.meta.glob('/src/assets/articles/*.md', { query: '?raw' });
 const targetPath = computed<string>(() => `/src/assets/articles/${props.title}.md`);
 
 const baseUrl = import.meta.env.BASE_URL;
-
-const updateDarkModeStatus = (): void => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-};
-
-onMounted(() => {
-    updateDarkModeStatus();
-    observer = new MutationObserver(() => updateDarkModeStatus());
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-});
-
-onUnmounted(() => {
-    if (observer) observer.disconnect();
-});
 
 async function loadArticle(path: string): Promise<void> {
     if (!modules[path]) {
@@ -56,7 +45,7 @@ async function loadArticle(path: string): Promise<void> {
         const sanitizedMarkdown = rawMarkdown.replace(/<!--[\s\S]*?-->/g, ''); // Remove Markdown comments
         let renderedHtml = md.render(sanitizedMarkdown);
 
-        // Automatically find src="/article-images/..." and turn it into src="/ev-finder/article-images/..."
+        // Turn src="/article-images/..." into src="/ev-finder/article-images/..."
         renderedHtml = renderedHtml.replace(
             /src="\/article-images\//g,
             `src="${baseUrl}article-images/`
@@ -79,7 +68,7 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     <main class="article-view">
         <div v-if="isLoading" class="status-message">Loading article...</div>
         <div v-else-if="hasError" class="status-message error">Article "{{ props.title }}" could not be loaded.</div>
-        <article v-else v-html="articleHtml" class="markdown-body" :class="{ 'force-dark-colors': isDarkMode }" />
+        <article v-else v-html="articleHtml" class="markdown-body" :class="{ 'force-dark-colors': isDark }" />
     </main>
 </template>
 
@@ -153,7 +142,6 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     margin: 1rem 0;
 }
 
-/* Hide MathJax assistive elements to prevent double rendering */
 :deep(mjx-assistive-mml) {
     display: none !important;
 }
@@ -166,7 +154,6 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     color: #cbd5e1 !important;
 }
 
-/* Ensure math formulas render in white during dark mode */
 .force-dark-colors:deep(mjx-container) {
     color: #ffffff !important;
 }
