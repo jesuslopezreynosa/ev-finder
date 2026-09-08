@@ -17,16 +17,16 @@ export interface Vehicle {
     market: string;
     driveAxle: string;
     vehicleType: string;
-    epaCombEfficiencyKwh100mi: number | null;
-    epaCombEfficiencyWhMi: number | null;
-    epaCombinedRangeMi: number | null;
-    netBatteryCapacityKwh: number | null;
+    epaCombinedEfficiencyKilowattHoursPerHundredMiles: number | null;
+    epaCombinedEfficiencyWattHoursPerMile: number | null;
+    epaCombinedRangeMiles: number | null;
+    netBatteryCapacityKilowattHours: number | null;
     batteryChemistry: string | null;
     recommendedDailyChargePercent: number | null;
-    typicalFullRangeMi: number | null;
-    chargingPorts: string | null;
-    dcChargingSpeedKw: number | null;
-    onboardChargerAmps: number | null;
+    typicalFullRangeMiles: number | null;
+    chargingPortTypes: string | null;
+    dcChargingSpeedKilowatts: number | null;
+    onboardChargerAmperes: number | null;
     supportsAc277vCharging: string | null;
     supportsBatteryPreconditioning: string | null;
     supportsSuperchargerAccess: string | null;
@@ -36,36 +36,36 @@ export interface Vehicle {
     maxPhoneKeys: number | string | null;
     hasPoweredLiftgate: string | null;
     hasOnePedalDrive: string | null;
-    hasPersistentOnePedalDrive: string | null;
+    isOnePedalDrivePersistent: string | null;
     hasAdaptiveCruiseControl: string | null;
     hasGlassRoof: string | null;
-    soundPowerWatts: number | null;
-    speakerCount: number | null;
-    subwooferCount: number | null;
-    soundDolbyAtmos: string | null;
-    soundSystemBrand: string | null;
-    supportsCarPlayAndroidAuto: string | null;
-    infotainmentOs: string | null;
-    infotainmentScreenSizeIn: number | null;
+    audioPowerWatts: number | null;
+    audioSpeakerCount: number | null;
+    audioSubwooferCount: number | null;
+    supportsAudioDolbyAtmos: string | null;
+    audioBrand: string | null;
+    supportsAppleCarPlayAndAndroidAuto: string | null;
+    infotainmentOperatingSystem: string | null;
+    infotainmentScreenSizeInches: number | null;
     navigationProvider: string | null;
     hasPoweredSeats: string | null;
     hasVentilatedSeats: string | null;
     hasHeatedSeats: string | null;
     hasHeatedSteeringWheel: string | null;
     hasHeatPump: string | null;
-    supportsOta: string | null;
+    supportsOverTheAirUpdates: string | null;
     hasGarageDoorOpener: string | null;
     countryOfAssembly: string | null;
-    hasUserProfiles: string | null;
-    hasSeatMirrorPerProfile: string | null;
+    supportsUserProfiles: string | null;
+    supportsMemoryProfilePerSeatAndMirror: string | null;
     hasPoweredSideMirrors: string | null;
     hasBuiltInDashcam: string | null;
     standardSeatMaterial: string | null;
-    frunkCapacityL: number | null;
+    frunkCapacityLiters: number | null;
     voltageArchitecture: string | null;
     maxSupportedDcChargingVoltage: string | null;
     batteryNominalVoltage: string | number | null;
-    supportsV2x: string | null;
+    supportsVehicleToEverything: string | null;
     seatCount: number | string | null;
     hasPetMode: string | null;
     exteriorCameraCount: number | null;
@@ -73,10 +73,11 @@ export interface Vehicle {
     driverCameraType: string | null;
     exteriorSensors: string | null;
     vehicleWarranty: string | null;
-    batteryDriveUnitWarranty: string | null;
+    batteryWarranty: string | null;
+    driveUnitWarranty: string | null;
     corrosionWarranty: string | null;
-    towingCapacity: string | null;
-    usbPorts: string | null;
+    towingCapacityPounds: string | null;
+    usbPortCount: string | null;
     includedConnectivityFeatures: string | null;
     optionalConnectivityFeatures: string | null;
     requiredFeatureSubscriptions: string | null;
@@ -88,7 +89,7 @@ export interface Vehicle {
     grossWeightPounds: number | null;
     powerHorsepower: number | null;
     torqueFootPounds: number | null;
-    zeroToSixtyTime: number | null;
+    zeroToSixtyTimeSeconds: number | null;
     turningRadiusFeet: number | null;
     [key: string]: any;
 }
@@ -130,7 +131,7 @@ const getChargingPortsArray = (portValue: any): string[] => {
 const dynamicFilterOptions = computed(() => {
     const stringCategories = [
         'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
-        'chargingPorts', 'countryOfAssembly', 'infotainmentOs', 'soundSystemBrand'
+        'chargingPortTypes', 'countryOfAssembly', 'infotainmentOperatingSystem', 'audioBrand'
     ] as const;
 
     const optionsMap: Record<string, string[]> = {};
@@ -140,9 +141,6 @@ const dynamicFilterOptions = computed(() => {
 
         props.vehicles.forEach(v => {
             let val = v[key];
-            if (key === 'infotainmentOs' && val === undefined) {
-                val = v.infotainmentOs;
-            }
 
             if (val === null || val === undefined || val === '') return;
 
@@ -168,19 +166,19 @@ const dynamicFilterOptions = computed(() => {
 
 const dataBounds = computed(() => {
     const modelYears = props.vehicles.map(v => Number(v.modelYear)).filter(y => !isNaN(y) && y > 0);
-    const epaRanges = props.vehicles.map(v => Number(v.epaCombinedRangeMi)).filter(r => !isNaN(r) && r > 0);
-    const dcChargingSpeeds = props.vehicles.map(v => Number(v.dcChargingSpeedKw)).filter(s => !isNaN(s) && s > 0);
+    const epaRanges = props.vehicles.map(v => Number(v.epaCombinedRangeMiles)).filter(r => !isNaN(r) && r > 0);
+    const dcChargingSpeeds = props.vehicles.map(v => Number(v.dcChargingSpeedKilowatts)).filter(s => !isNaN(s) && s > 0);
 
     return {
         modelYear: {
             min: modelYears.length ? Math.min(...modelYears) : 2018,
             max: modelYears.length ? Math.max(...modelYears) : ((new Date()).getFullYear() + 1)
         },
-        epaCombinedRangeMi: {
+        epaCombinedRangeMiles: {
             min: epaRanges.length ? Math.min(...epaRanges) : 0,
             max: epaRanges.length ? Math.max(...epaRanges) : 500
         },
-        dcChargingSpeedKw: {
+        dcChargingSpeedKilowatts: {
             min: dcChargingSpeeds.length ? Math.min(...dcChargingSpeeds) : 0,
             max: dcChargingSpeeds.length ? Math.max(...dcChargingSpeeds) : 350
         }
@@ -191,12 +189,13 @@ const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
 
 const technicalCategories = [
-    { id: 'chargingPerformance', title: 'Charging & Performance' },
-    { id: 'features', title: 'Features' },
-    { id: 'infotainmentTechnology', title: 'Infotainment & Tech' },
-    { id: 'marketWarranty', title: 'Market & Warranty' },
-    { id: 'connectivitySubscriptions', title: 'Connectivity & Subscriptions' },
+    { id: 'powertrainPerformance', title: 'Powertrain & Performance' },
+    { id: 'energyCharging', title: 'Energy & Charging' },
     { id: 'dimensions', title: 'Dimensions' },
+    { id: 'cabinConvenience', title: 'Cabin & Convenience' },
+    { id: 'infotainmentConnectivity', title: 'Infotainment & Connectivity' },
+    { id: 'camerasSensors', title: 'Cameras & Sensors' },
+    { id: 'warranties', title: 'Warranties' }
 ] as const;
 
 type CategoryId = (typeof technicalCategories)[number]['id'];
@@ -204,39 +203,26 @@ type CategoryId = (typeof technicalCategories)[number]['id'];
 const activeTabId = ref<string>(technicalCategories[0].id);
 
 const categoryMappings: Record<CategoryId, string[]> = {
-    chargingPerformance: [
-        'epaCombEfficiencyKwh100mi', 'epaCombEfficiencyWhMi', 'epaCombinedRangeMi',
-        'typicalFullRangeMi', 'netBatteryCapacityKwh', 'batteryChemistry',
-        'recommendedDailyChargePercent', 'chargingPorts', 'dcChargingSpeedKw',
-        'onboardChargerAmps', 'supportsAc277vCharging', 'supportsBatteryPreconditioning',
-        'supportsSuperchargerAccess', 'supportsPlugAndChargeIso15118', 'plugAndChargeProviders',
-        'voltageArchitecture', 'maxSupportedDcChargingVoltage', 'batteryNominalVoltage',
-        'supportsV2x', 'towingCapacity', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTime'
+    powertrainPerformance: [
+        'hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'
     ],
-    marketWarranty: [
-        'vehicleType', 'market', 'countryOfAssembly', 'vehicleWarranty',
-        'corrosionWarranty', 'batteryDriveUnitWarranty'
-    ],
-    features: [
-        'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasPersistentOnePedalDrive',
-        'hasAdaptiveCruiseControl', 'hasGlassRoof', 'hasPoweredSeats',
-        'hasVentilatedSeats', 'hasHeatedSeats', 'hasHeatedSteeringWheel',
-        'hasHeatPump', 'hasGarageDoorOpener', 'frunkCapacityL', 'seatCount',
-        'standardSeatMaterial', 'hasPetMode', 'hasPoweredSideMirrors', 'usbPorts'
-    ],
-    infotainmentTechnology: [
-        'supportsPhoneAsAKey', 'maxPhoneKeys', 'soundPowerWatts', 'speakerCount',
-        'subwooferCount', 'soundDolbyAtmos', 'soundSystemBrand', 'supportsCarPlayAndroidAuto',
-        'infotainmentOs', 'infotainmentScreenSizeIn', 'navigationProvider', 'supportsOta',
-        'hasUserProfiles', 'hasSeatMirrorPerProfile', 'hasBuiltInDashcam',
-        'exteriorCameraCount', 'interiorCameraCount', 'driverCameraType', 'exteriorSensors'
-    ],
-    connectivitySubscriptions: [
-        'includedConnectivityFeatures', 'optionalConnectivityFeatures', 'requiredFeatureSubscriptions', 'optionalSubscriptions'
+    energyCharging: [
+        'batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'
     ],
     dimensions: [
-        'heightInches', 'widthInches', 'lengthInches', 'groundClearanceInches',
-        'grossWeightPounds', 'turningRadiusFeet'
+        'frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'
+    ],
+    cabinConvenience: [
+        'hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'
+    ],
+    infotainmentConnectivity: [
+        'includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'
+    ],
+    camerasSensors: [
+        'driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'
+    ],
+    warranties: [
+        'batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty'
     ]
 };
 
@@ -317,8 +303,8 @@ const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     switch (key) {
         case 'hasAdaptiveCruiseControl':
             return !cleanStr.includes('no');
-        case 'supportsCarPlayAndroidAuto':
-            return cleanStr.includes('yes') || cleanStr.includes('true');
+        case 'supportsAppleCarPlayAndAndroidAuto':
+            return cleanStr.includes('yes') || cleanStr.includes('true') || cleanStr.includes('wireless') || cleanStr.includes('wired');
         default:
             return cleanStr.length > 0;
     }
@@ -332,7 +318,7 @@ const filteredVehicles = computed(() => {
     return props.vehicles.filter(vehicle => {
         const stringCategories = [
             'manufacturer', 'driveAxle', 'vehicleType', 'batteryChemistry',
-            'chargingPorts', 'countryOfAssembly', 'infotainmentOs', 'soundSystemBrand'
+            'chargingPortTypes', 'countryOfAssembly', 'infotainmentOperatingSystem', 'audioBrand'
         ] as const;
 
         const matchesStrings = stringCategories.every(key => {
@@ -340,9 +326,6 @@ const filteredVehicles = computed(() => {
             if (!selections || selections.length === 0) return true;
 
             let rawValue = vehicle[key];
-            if (key === 'infotainmentOs' && rawValue === undefined) {
-                rawValue = vehicle.infotainmentOs;
-            }
 
             if (rawValue === null || rawValue === undefined) return false;
 
@@ -362,9 +345,9 @@ const filteredVehicles = computed(() => {
 
         const booleanCategories = [
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
-            'hasGlassRoof', 'supportsCarPlayAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
+            'hasGlassRoof', 'supportsAppleCarPlayAndAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
             'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
-            'hasPetMode', 'soundDolbyAtmos'
+            'hasPetMode', 'supportsAudioDolbyAtmos'
         ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
@@ -386,12 +369,12 @@ const filteredVehicles = computed(() => {
         });
 
         const vehicleYear = Number(vehicle.modelYear);
-        const vehicleRange = Number(vehicle.epaCombinedRangeMi);
-        const vehicleSpeed = Number(vehicle.dcChargingSpeedKw);
+        const vehicleRange = Number(vehicle.epaCombinedRangeMiles);
+        const vehicleSpeed = Number(vehicle.dcChargingSpeedKilowatts);
 
         const filterYearMin = Number(filters.modelYear?.min ?? 0);
-        const filterRangeMin = Number(filters.epaCombinedRangeMi?.min ?? 0);
-        const filterSpeedMin = Number(filters.dcChargingSpeedKw?.min ?? 0);
+        const filterRangeMin = Number(filters.epaCombinedRangeMiles?.min ?? 0);
+        const filterSpeedMin = Number(filters.dcChargingSpeedKilowatts?.min ?? 0);
 
         const matchesYear = isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin);
         const matchesRange = isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin);
@@ -411,8 +394,8 @@ const getVehicleKey = (v: Vehicle): string => {
         v.driveAxle,
         v.market,
         v.batteryChemistry,
-        v.dcChargingSpeedKw,
-        v.netBatteryCapacityKwh
+        v.dcChargingSpeedKilowatts,
+        v.netBatteryCapacityKilowattHours
     ].map(p => String(p ?? '').trim());
 
     return keyParts.filter(Boolean).join('-');
@@ -601,23 +584,25 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <strong>{{ vehicle.trim }}</strong>
                                 <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
                                 <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                                    <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKwh }} kWh</span>
+                                    <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKilowattHours }}
+                                        kWh</span>
                                 </span>
-                                <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKw }} kW</span>
+                                <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKilowatts }}
+                                    kW</span>
                             </p>
                             <p class="specs-preview-summary">
                                 <span>{{ vehicle.vehicleType }}</span>
                                 <span class="summary-bullet">&bull;</span>
-                                <span>{{ vehicle.epaCombinedRangeMi }} mi range</span>
+                                <span>{{ vehicle.epaCombinedRangeMiles }} mi range</span>
                                 <span class="summary-bullet">&bull;</span>
                                 <span class="inline-charger-container">
-                                    <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPorts)"
+                                    <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPortTypes)"
                                         :key="port" class="inline-charger-item">
                                         <span :data-tooltip="port" class="tooltip-wrapper">
                                             <img :src="getChargingPortIconUrl(port)" :alt="port"
                                                 class="charger-inline-icon" />
                                         </span>
-                                        <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPorts).length - 1"
+                                        <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPortTypes).length - 1"
                                             class="charger-separator">&amp;</span>
                                     </span>
                                 </span>
@@ -1010,7 +995,6 @@ html.dark .battery-pill {
     font-weight: 600;
     word-break: break-word;
     overflow-wrap: anywhere;
-    /* Handles long strings like "Google built-in" gracefully */
 }
 
 html.dark .specs-preview-summary {

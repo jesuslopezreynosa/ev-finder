@@ -31,19 +31,20 @@ const emit = defineEmits<{
                 <div class="hero-metrics-row">
                     <div class="hero-metric-card highlight-range">
                         <span class="hero-value">
-                            {{ activeVehicle.epaCombinedRangeMi || '—' }}<span class="hero-value-unit">mi</span>
+                            {{ activeVehicle.epaCombinedRangeMiles || '—' }}<span class="hero-value-unit">mi</span>
                         </span>
                         <span class="hero-label">EPA Rated Range</span>
                     </div>
                     <div class="hero-metric-card highlight-battery">
                         <span class="hero-value">
-                            {{ activeVehicle.netBatteryCapacityKwh || '—' }}<span class="hero-value-unit">kWh</span>
+                            {{ activeVehicle.netBatteryCapacityKilowattHours || '—' }}<span
+                                class="hero-value-unit">kWh</span>
                         </span>
                         <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || '' }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
                         <span class="hero-value">
-                            {{ activeVehicle.dcChargingSpeedKw || '—' }}<span class="hero-value-unit">kW</span>
+                            {{ activeVehicle.dcChargingSpeedKilowatts || '—' }}<span class="hero-value-unit">kW</span>
                         </span>
                         <span class="hero-label">Peak DC Charging Speed</span>
                     </div>

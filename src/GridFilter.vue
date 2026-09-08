@@ -8,13 +8,13 @@ export interface FilterState {
     driveAxle: string[];
     vehicleType: string[];
     batteryChemistry: string[];
-    chargingPorts: string[];
+    chargingPortTypes: string[];
     countryOfAssembly: string[];
-    infotainmentOs: string[];
-    soundSystemBrand: string[];
+    infotainmentOperatingSystem: string[];
+    audioBrand: string[];
     modelYear: { min: number; max: number | null; };
-    epaCombinedRangeMi: { min: number; max: number | null; };
-    dcChargingSpeedKw: { min: number; max: number | null; };
+    epaCombinedRangeMiles: { min: number; max: number | null; };
+    dcChargingSpeedKilowatts: { min: number; max: number | null; };
     supportsBatteryPreconditioning: boolean | null;
     supportsSuperchargerAccess: boolean | null;
     supportsPlugAndChargeIso15118: boolean | null;
@@ -23,7 +23,7 @@ export interface FilterState {
     hasOnePedalDrive: boolean | null;
     hasAdaptiveCruiseControl: boolean | null;
     hasGlassRoof: boolean | null;
-    supportsCarPlayAndroidAuto: boolean | null;
+    supportsAppleCarPlayAndAndroidAuto: boolean | null;
     hasPoweredSeats: boolean | null;
     hasVentilatedSeats: boolean | null;
     hasHeatedSeats: boolean | null;
@@ -32,7 +32,7 @@ export interface FilterState {
     hasPoweredSideMirrors: boolean | null;
     hasBuiltInDashcam: boolean | null;
     hasPetMode: boolean | null;
-    soundDolbyAtmos: boolean | null;
+    supportsAudioDolbyAtmos: boolean | null;
 }
 
 interface RangeBounds {
@@ -42,8 +42,8 @@ interface RangeBounds {
 
 interface BoundsProp {
     modelYear: RangeBounds;
-    epaCombinedRangeMi: RangeBounds;
-    dcChargingSpeedKw: RangeBounds;
+    epaCombinedRangeMiles: RangeBounds;
+    dcChargingSpeedKilowatts: RangeBounds;
 }
 
 interface StringGroupConfig {
@@ -57,10 +57,10 @@ type StringCategoryKey =
     | 'driveAxle'
     | 'vehicleType'
     | 'batteryChemistry'
-    | 'chargingPorts'
+    | 'chargingPortTypes'
     | 'countryOfAssembly'
-    | 'infotainmentOs'
-    | 'soundSystemBrand';
+    | 'infotainmentOperatingSystem'
+    | 'audioBrand';
 
 type BooleanFilterKey =
     | 'supportsBatteryPreconditioning'
@@ -71,7 +71,7 @@ type BooleanFilterKey =
     | 'hasOnePedalDrive'
     | 'hasAdaptiveCruiseControl'
     | 'hasGlassRoof'
-    | 'supportsCarPlayAndroidAuto'
+    | 'supportsAppleCarPlayAndAndroidAuto'
     | 'hasPoweredSeats'
     | 'hasVentilatedSeats'
     | 'hasHeatedSeats'
@@ -80,7 +80,7 @@ type BooleanFilterKey =
     | 'hasPoweredSideMirrors'
     | 'hasBuiltInDashcam'
     | 'hasPetMode'
-    | 'soundDolbyAtmos';
+    | 'supportsAudioDolbyAtmos';
 
 const props = defineProps<{
     bounds: BoundsProp;
@@ -96,18 +96,18 @@ const { isDark, toggleTheme } = useTheme();
 const activePopoverKey = ref<string | null>(null);
 
 const yearMin = ref<number>(props.bounds?.modelYear?.min ?? 2018);
-const rangeMin = ref<number>(props.bounds?.epaCombinedRangeMi?.min ?? 0);
-const speedMin = ref<number>(props.bounds?.dcChargingSpeedKw?.min ?? 0);
+const rangeMin = ref<number>(props.bounds?.epaCombinedRangeMiles?.min ?? 0);
+const speedMin = ref<number>(props.bounds?.dcChargingSpeedKilowatts?.min ?? 0);
 
 const selectedFilters = ref({
     manufacturer: [] as string[],
     driveAxle: [] as string[],
     vehicleType: [] as string[],
     batteryChemistry: [] as string[],
-    chargingPorts: [] as string[],
+    chargingPortTypes: [] as string[],
     countryOfAssembly: [] as string[],
-    infotainmentOs: [] as string[],
-    soundSystemBrand: [] as string[],
+    infotainmentOperatingSystem: [] as string[],
+    audioBrand: [] as string[],
     supportsBatteryPreconditioning: null as boolean | null,
     supportsSuperchargerAccess: null as boolean | null,
     supportsPlugAndChargeIso15118: null as boolean | null,
@@ -116,7 +116,7 @@ const selectedFilters = ref({
     hasOnePedalDrive: null as boolean | null,
     hasAdaptiveCruiseControl: null as boolean | null,
     hasGlassRoof: null as boolean | null,
-    supportsCarPlayAndroidAuto: null as boolean | null,
+    supportsAppleCarPlayAndAndroidAuto: null as boolean | null,
     hasPoweredSeats: null as boolean | null,
     hasVentilatedSeats: null as boolean | null,
     hasHeatedSeats: null as boolean | null,
@@ -125,14 +125,15 @@ const selectedFilters = ref({
     hasPoweredSideMirrors: null as boolean | null,
     hasBuiltInDashcam: null as boolean | null,
     hasPetMode: null as boolean | null,
-    soundDolbyAtmos: null as boolean | null
+    supportsAudioDolbyAtmos: null as boolean | null
 });
 
 const normalizeListValues = (rawChoices: unknown): string[] => {
     if (!rawChoices) return [];
 
-    const items = Array.isArray(rawChoices) ? rawChoices : [String(rawChoices)];
+    const items = Array.isArray(rawChoices) ? rawChoices : [rawChoices];
     const expanded = items.flatMap(item => {
+        if (item === null || item === undefined) return [];
         if (typeof item === 'string' && item.includes(',')) {
             return item.split(',').map(s => s.trim());
         }
@@ -143,18 +144,17 @@ const normalizeListValues = (rawChoices: unknown): string[] => {
 };
 
 const stringFilterGroups = computed((): StringGroupConfig[] => {
-    const infoOsChoices = props.options.infotainmentOs || [];
-    const portsChoices = props.options.chargingPorts || [];
+    const opts = props.options || {};
 
     return [
-        { title: 'Manufacturer', key: 'manufacturer', choices: normalizeListValues(props.options.manufacturer) },
-        { title: 'Drive Axle', key: 'driveAxle', choices: normalizeListValues(props.options.driveAxle) },
-        { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeListValues(props.options.vehicleType) },
-        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeListValues(props.options.batteryChemistry) },
-        { title: 'Charge Port', key: 'chargingPorts', choices: normalizeListValues(portsChoices) },
-        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeListValues(props.options.countryOfAssembly) },
-        { title: 'Infotainment OS', key: 'infotainmentOs', choices: normalizeListValues(infoOsChoices) },
-        { title: 'Sound System Brand', key: 'soundSystemBrand', choices: normalizeListValues(props.options.soundSystemBrand) }
+        { title: 'Manufacturer', key: 'manufacturer', choices: normalizeListValues(opts.manufacturer) },
+        { title: 'Drive Axle', key: 'driveAxle', choices: normalizeListValues(opts.driveAxle) },
+        { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeListValues(opts.vehicleType) },
+        { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeListValues(opts.batteryChemistry) },
+        { title: 'Charge Port', key: 'chargingPortTypes', choices: normalizeListValues(opts.chargingPortTypes) },
+        { title: 'Country of Assembly', key: 'countryOfAssembly', choices: normalizeListValues(opts.countryOfAssembly) },
+        { title: 'Infotainment OS', key: 'infotainmentOperatingSystem', choices: normalizeListValues(opts.infotainmentOperatingSystem) },
+        { title: 'Sound System Brand', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
     ];
 });
 
@@ -167,7 +167,7 @@ const booleanFilters = [
     { key: 'hasOnePedalDrive', label: 'One-Pedal Drive' },
     { key: 'hasAdaptiveCruiseControl', label: 'Adaptive Cruise Control' },
     { key: 'hasGlassRoof', label: 'Glass Roof' },
-    { key: 'supportsCarPlayAndroidAuto', label: 'Apple CarPlay & Android Auto' },
+    { key: 'supportsAppleCarPlayAndAndroidAuto', label: 'Apple CarPlay & Android Auto' },
     { key: 'hasPoweredSeats', label: 'Powered Seats' },
     { key: 'hasVentilatedSeats', label: 'Ventilated Seats' },
     { key: 'hasHeatedSeats', label: 'Heated Seats' },
@@ -176,7 +176,7 @@ const booleanFilters = [
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
     { key: 'hasBuiltInDashcam', label: 'Built-in Dashcam' },
     { key: 'hasPetMode', label: 'Pet Mode' },
-    { key: 'soundDolbyAtmos', label: 'Dolby Atmos' }
+    { key: 'supportsAudioDolbyAtmos', label: 'Dolby Atmos' }
 ] as const;
 
 const activeChipsList = computed(() => {
@@ -219,8 +219,8 @@ const syncAndEmit = () => {
     const payload: FilterState = {
         ...structuredClone(toRaw(selectedFilters.value)),
         modelYear: { min: Number(yearMin.value), max: null },
-        epaCombinedRangeMi: { min: Number(rangeMin.value), max: null },
-        dcChargingSpeedKw: { min: Number(speedMin.value), max: null }
+        epaCombinedRangeMiles: { min: Number(rangeMin.value), max: null },
+        dcChargingSpeedKilowatts: { min: Number(speedMin.value), max: null }
     };
     emitChange('filter-change', payload);
 };
@@ -231,8 +231,8 @@ const resetAllFilters = () => {
 
     if (props.bounds) {
         yearMin.value = props.bounds.modelYear.min;
-        rangeMin.value = props.bounds.epaCombinedRangeMi.min;
-        speedMin.value = props.bounds.dcChargingSpeedKw.min;
+        rangeMin.value = props.bounds.epaCombinedRangeMiles.min;
+        speedMin.value = props.bounds.dcChargingSpeedKilowatts.min;
     }
     syncAndEmit();
 };
@@ -252,15 +252,15 @@ const handleOutsideClick = (event: MouseEvent) => {
 };
 
 const getPercent = (value: number, min: number, max: number): number => {
-    if (max === min) return 100;
+    if (max === min || !max) return 100;
     return ((value - min) / (max - min)) * 100;
 };
 
 const applyBounds = (boundsSource: BoundsProp) => {
     if (!boundsSource) return;
     yearMin.value = boundsSource.modelYear.min;
-    rangeMin.value = boundsSource.epaCombinedRangeMi.min;
-    speedMin.value = boundsSource.dcChargingSpeedKw.min;
+    rangeMin.value = boundsSource.epaCombinedRangeMiles.min;
+    speedMin.value = boundsSource.dcChargingSpeedKilowatts.min;
 };
 
 onMounted(() => {
@@ -295,7 +295,7 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
         </div>
 
         <div v-if="activeChipsList.length" class="active-chips-line">
-            <div v-for="chip in activeChipsList" :key="chip.displayValue" class="filter-chip">
+            <div v-for="chip in activeChipsList" :key="`${chip.categoryKey}-${chip.displayValue}`" class="filter-chip">
                 <span>{{ chip.displayValue }}</span>
                 <button class="chip-remove-x" @click="removeChip(chip)">&times;</button>
             </div>
@@ -310,15 +310,15 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min EPA Range: <strong>{{ rangeMin }} mi</strong></span>
-                <input type="range" :min="bounds.epaCombinedRangeMi.min" :max="bounds.epaCombinedRangeMi.max" step="10"
-                    v-model.number="rangeMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.epaCombinedRangeMi.min, bounds.epaCombinedRangeMi.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.epaCombinedRangeMi.min, bounds.epaCombinedRangeMi.max)}%, #e2e8f0 100%)` }" />
+                <input type="range" :min="bounds.epaCombinedRangeMiles.min" :max="bounds.epaCombinedRangeMiles.max"
+                    step="10" v-model.number="rangeMin" @input="syncAndEmit"
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 100%)` }" />
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min DC Charge: <strong>{{ speedMin }} kW</strong></span>
-                <input type="range" :min="bounds.dcChargingSpeedKw.min" :max="bounds.dcChargingSpeedKw.max" step="25"
-                    v-model.number="speedMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.dcChargingSpeedKw.min, bounds.dcChargingSpeedKw.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.dcChargingSpeedKw.min, bounds.dcChargingSpeedKw.max)}%, #e2e8f0 100%)` }" />
+                <input type="range" :min="bounds.dcChargingSpeedKilowatts.min"
+                    :max="bounds.dcChargingSpeedKilowatts.max" step="25" v-model.number="speedMin" @input="syncAndEmit"
+                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 100%)` }" />
             </div>
         </div>
 
