@@ -665,13 +665,13 @@ const evaluateRowDifference = (label: string): boolean => {
     margin-top: 16px;
     padding: 6px 12px;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
 html.dark .results-status-bar {
-    background-color: #1e293b;
-    border-color: #334155;
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
 }
 
 .status-counter {
@@ -680,15 +680,15 @@ html.dark .results-status-bar {
 }
 
 html.dark .status-counter {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .status-counter strong {
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 html.dark .status-counter strong {
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .compare-actions-bar {
@@ -698,8 +698,9 @@ html.dark .status-counter strong {
 }
 
 .compare-trigger-btn {
-    background-color: #2563eb;
+    background-color: var(--accent-primary);
     color: #ffffff;
+    /* Changed from var(--text-primary) */
     border: none;
     border-radius: 6px;
     padding: 6px 12px;
@@ -743,16 +744,16 @@ html.dark .compare-clear-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #ffffff;
+    background: var(--bg-primary);
     padding: 8px 12px;
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 html.dark .floating-compare-bar {
-    background: #1e293b;
-    border-color: #334155;
+    background: var(--bg-primary);
+    border-color: var(--border-color);
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
@@ -818,8 +819,8 @@ html.dark .compare-checkbox-label {
 }
 
 .grid-item {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     padding: 20px;
     border-radius: 12px;
     cursor: pointer;
@@ -835,8 +836,8 @@ html.dark .compare-checkbox-label {
 }
 
 html.dark .grid-item {
-    background-color: #1e293b;
-    border-color: #334155;
+    color: var(--bg-primary);
+    border-color: var(--border-color);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
@@ -852,7 +853,7 @@ html.dark .grid-item:hover {
 }
 
 .grid-item.is-selected {
-    border-color: #2563eb;
+    border-color: var(--accent-primary);
     box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1), 0 8px 10px -6px rgba(37, 99, 235, 0.05);
     z-index: 3;
 }
@@ -890,12 +891,12 @@ html.dark .grid-item.is-selected {
     font-size: 20px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: #0f172a;
+    color: var(--text-primary);
     word-break: break-word;
 }
 
 html.dark .grid-item h3 {
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .trim-drivetrain-line {
@@ -909,7 +910,7 @@ html.dark .grid-item h3 {
 }
 
 html.dark .trim-drivetrain-line {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .pill {
@@ -930,9 +931,11 @@ html.dark .trim-drivetrain-line {
 }
 
 html.dark .charging-speed-pill {
-    background-color: #1e293b;
+    background-color: rgba(250, 204, 21, 0.15);
+    /* Light yellow background */
     color: #facc15;
-    border-color: #a16207;
+    /* Bright yellow text */
+    border-color: rgba(250, 204, 21, 0.3);
 }
 
 .drivetrain-pill {
@@ -942,7 +945,7 @@ html.dark .charging-speed-pill {
 
 html.dark .drivetrain-pill {
     background-color: #334155;
-    color: #ffffff;
+    color: var(--text-primary);
     border-color: #475569;
 }
 
@@ -953,9 +956,11 @@ html.dark .drivetrain-pill {
 }
 
 html.dark .battery-pill {
-    background-color: #1e293b;
+    background-color: rgba(52, 211, 153, 0.15);
+    /* Light green background */
     color: #34d399;
-    border-color: #065f46;
+    /* Bright green text */
+    border-color: rgba(52, 211, 153, 0.3);
 }
 
 .specs-preview-summary {
@@ -990,7 +995,7 @@ html.dark .battery-pill {
 }
 
 .spec-value {
-    color: #1e293b;
+    color: var(--bg-primary);
     font-size: 13px;
     font-weight: 600;
     word-break: break-word;
@@ -1056,8 +1061,8 @@ html.dark .charger-inline-icon {
     bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #1e293b;
-    color: #ffffff;
+    color: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 11px;
     font-weight: 500;
     padding: 4px 8px;
@@ -1072,7 +1077,7 @@ html.dark .charger-inline-icon {
 
 html.dark .tooltip-wrapper::after {
     background-color: #f8fafc;
-    color: #0f172a;
+    color: var(--text-primary);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
@@ -1084,7 +1089,7 @@ html.dark .tooltip-wrapper::after {
     transform: translateX(-50%);
     border-width: 5px;
     border-style: solid;
-    border-color: #1e293b transparent transparent transparent;
+    border-color: var(--bg-primary) transparent transparent transparent;
     opacity: 0;
     pointer-events: none;
     z-index: 5;
@@ -1120,7 +1125,7 @@ html.dark .compare-modal-overlay {
 }
 
 .compare-modal {
-    background: #ffffff;
+    background: var(--bg-primary);
     border-radius: 12px;
     width: 100%;
     max-width: 1200px;
@@ -1133,7 +1138,7 @@ html.dark .compare-modal-overlay {
 
 html.dark .compare-modal {
     background: #0f172a;
-    border: 1px solid #334155;
+    border: 1px solid var(--border-color);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
@@ -1142,18 +1147,18 @@ html.dark .compare-modal {
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 html.dark .compare-modal-header {
-    border-bottom-color: #1e293b;
+    border-bottom-color: var(--bg-primary);
     background-color: #0f172a;
 }
 
 .compare-modal-header h2 {
     margin: 0;
     font-size: 18px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 html.dark .compare-modal-header h2 {
@@ -1197,7 +1202,7 @@ html.dark .compare-modal-body {
 .compare-table th,
 .compare-table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
     font-size: 13px;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -1206,13 +1211,13 @@ html.dark .compare-modal-body {
 
 html.dark .compare-table th,
 html.dark .compare-table td {
-    border-bottom-color: #1e293b;
+    border-bottom-color: var(--bg-primary);
     color: #e2e8f0;
 }
 
 .col-spec-header {
     width: 20%;
-    color: #0f172a;
+    color: var(--text-primary);
     font-weight: 700;
 }
 
@@ -1228,7 +1233,7 @@ html.dark .col-spec-header {
 }
 
 .compare-column-header strong {
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 14px;
 }
 
@@ -1276,7 +1281,7 @@ html.dark .compare-column-header span {
 
 html.dark .compare-spec-key {
     color: #f1f5f9;
-    background: #1e293b;
+    background: var(--bg-primary);
 }
 
 .compare-header-controls {
@@ -1297,7 +1302,7 @@ html.dark .compare-spec-key {
 }
 
 html.dark .toggle-differences-label {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .category-header-row td {
@@ -1308,7 +1313,7 @@ html.dark .toggle-differences-label {
 }
 
 html.dark .category-header-row td {
-    background-color: #1e293b;
+    background-color: var(--bg-primary);
     border-bottom-color: #475569;
     border-top-color: #475569;
 }

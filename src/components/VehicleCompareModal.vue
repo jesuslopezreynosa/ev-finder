@@ -93,7 +93,7 @@ html.dark .compare-modal-overlay {
 }
 
 .compare-modal {
-    background: #ffffff;
+    background: var(--bg-primary);
     border-radius: 12px;
     width: 100%;
     max-width: 1200px;
@@ -106,7 +106,7 @@ html.dark .compare-modal-overlay {
 
 html.dark .compare-modal {
     background: #0f172a;
-    border: 1px solid #334155;
+    border: 1px solid var(--border-color);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
@@ -115,18 +115,18 @@ html.dark .compare-modal {
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 html.dark .compare-modal-header {
-    border-bottom-color: #1e293b;
+    border-bottom-color: var(--bg-primary);
     background-color: #0f172a;
 }
 
 .compare-modal-header h2 {
     margin: 0;
     font-size: 18px;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 html.dark .compare-modal-header h2 {
@@ -170,7 +170,7 @@ html.dark .compare-modal-body {
 .compare-table th,
 .compare-table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
     font-size: 13px;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -179,13 +179,13 @@ html.dark .compare-modal-body {
 
 html.dark .compare-table th,
 html.dark .compare-table td {
-    border-bottom-color: #1e293b;
+    border-bottom-color: var(--bg-primary);
     color: #e2e8f0;
 }
 
 .col-spec-header {
     width: 20%;
-    color: #0f172a;
+    color: var(--text-primary);
     font-weight: 700;
 }
 
@@ -201,7 +201,7 @@ html.dark .col-spec-header {
 }
 
 .compare-column-header strong {
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 14px;
 }
 
@@ -249,7 +249,7 @@ html.dark .compare-column-header span {
 
 html.dark .compare-spec-key {
     color: #f1f5f9;
-    background: #1e293b;
+    background: var(--bg-primary);
 }
 
 .compare-header-controls {
@@ -270,7 +270,7 @@ html.dark .compare-spec-key {
 }
 
 html.dark .toggle-differences-label {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .category-header-row td {
@@ -281,7 +281,7 @@ html.dark .toggle-differences-label {
 }
 
 html.dark .category-header-row td {
-    background-color: #1e293b;
+    background-color: var(--bg-primary);
     border-bottom-color: #475569;
     border-top-color: #475569;
 }

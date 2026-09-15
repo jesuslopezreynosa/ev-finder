@@ -35,14 +35,32 @@ const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
 </template>
 
 <style>
+:root {
+    --bg-primary: #f1f5f9;
+    --bg-card: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --accent-primary: #0284c7;
+    --accent-hover: #0369a1;
+    --border-color: #cbd5e1;
+}
+
+html.dark {
+    --bg-primary: #0b132b;
+    --bg-card: #1c2541;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-primary: #38bdf8;
+    --accent-hover: #0ea5e9;
+    --border-color: #334155;
+}
+
 html,
 body {
     margin: 0;
     padding: 0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-html.dark body {
-    background-color: #0f172a;
 }
 </style>
