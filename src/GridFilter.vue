@@ -385,7 +385,7 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
 <style scoped>
 .compact-filter-dashboard {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: var(--bg-primary);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 16px;
@@ -394,12 +394,6 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
     flex-direction: column;
     gap: 14px;
     transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-html.dark .compact-filter-dashboard {
-    background: var(--bg-primary);
-    border-color: var(--border-color);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 .filter-header {
@@ -498,14 +492,10 @@ html.dark .chip-remove-x {
 .sliders-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    background: #f8fafc;
+    background: var(--bg-primary);
     padding: 12px;
     border-radius: 8px;
     gap: 16px;
-}
-
-html.dark .sliders-row {
-    background: #0f172a;
 }
 
 .compact-range-group {
@@ -625,8 +615,8 @@ html.dark .counter-badge {
     top: 100%;
     left: 0;
     margin-top: 6px;
-    background: var(--bg-primary);
-    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
     border-radius: 8px;
     padding: 8px;
@@ -640,7 +630,7 @@ html.dark .counter-badge {
 }
 
 html.dark .dropdown-popover-box {
-    background: #0f172a;
+    background: #2b3553;
     border-color: #475569;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
 }
@@ -719,14 +709,14 @@ html.dark .features-popover-grid {
     justify-content: space-between;
     align-items: center;
     padding: 4px 8px;
-    background: #f8fafc;
+    background: #ffffff;
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
 
 html.dark .feature-toggle-pill {
-    background: var(--bg-primary);
-    border-color: var(--border-color);
+    background: #2b3553;
+    border-color: #475569;
 }
 
 .feature-pill-title {
