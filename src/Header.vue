@@ -54,7 +54,7 @@ defineProps<{
     cursor: pointer;
     text-align: left;
     border-radius: 6px;
-    color: #0f172a;
+    color: var(--text-primary);
     transition: background-color 0.15s ease-in-out;
 }
 
@@ -68,11 +68,11 @@ defineProps<{
 }
 
 html.dark .logo-btn {
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 html.dark .logo-btn:hover {
-    background-color: #1e293b;
+    background-color: var(--bg-primary);
 }
 
 .tabs {
@@ -94,8 +94,8 @@ html.dark .logo-btn:hover {
 
 .default-btn:hover,
 .default-btn.active {
-    background-color: #e2e8f0;
-    color: #0f172a;
+    background-color: var(--border-color);
+    color: var(--text-primary);
     border-color: #94a3b8;
 }
 
@@ -106,14 +106,14 @@ html.dark .logo-btn:hover {
 
 html.dark .default-btn {
     background-color: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 html.dark .default-btn:hover,
 html.dark .default-btn.active {
-    background-color: #1e293b;
-    color: #ffffff;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     border-color: #475569;
 }
 

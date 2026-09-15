@@ -289,7 +289,30 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
             <div class="filter-actions-group">
                 <button @click="resetAllFilters" class="reset-filters-action-btn">Reset Filters</button>
                 <button @click="toggleTheme" class="theme-toggle-btn" type="button" aria-label="Toggle Theme">
-                    <span>{{ isDark ? '☀️' : '🌙' }}</span>
+                    <!-- <span>{{ isDark ? '☀️' : '🌙' }}</span> -->
+                    <span>
+                        <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                            <!-- Paste sun.max.fill SVG path here -->
+                            <g>
+                                <rect height="21.2012" opacity="0" width="21.4844" x="0" y="0" />
+                                <path
+                                    d="M10.5664 3.79883C11.0254 3.79883 11.4062 3.41797 11.4062 2.94922L11.4062 0.849609C11.4062 0.380859 11.0254 0 10.5664 0C10.0977 0 9.7168 0.380859 9.7168 0.849609L9.7168 2.94922C9.7168 3.41797 10.0977 3.79883 10.5664 3.79883ZM15.3516 5.80078C15.6836 6.12305 16.2207 6.13281 16.5527 5.80078L18.0469 4.30664C18.3691 3.98438 18.3691 3.4375 18.0469 3.10547C17.7246 2.7832 17.1777 2.7832 16.8555 3.10547L15.3516 4.60938C15.0293 4.93164 15.0293 5.47852 15.3516 5.80078ZM17.334 10.5957C17.334 11.0547 17.7246 11.4355 18.1836 11.4355L20.2832 11.4355C20.7422 11.4355 21.123 11.0547 21.123 10.5957C21.123 10.1367 20.7422 9.74609 20.2832 9.74609L18.1836 9.74609C17.7246 9.74609 17.334 10.1367 17.334 10.5957ZM15.3516 15.3906C15.0293 15.7227 15.0293 16.2598 15.3516 16.582L16.8555 18.0957C17.1777 18.418 17.7246 18.3984 18.0469 18.0859C18.3691 17.7539 18.3691 17.2168 18.0469 16.8945L16.543 15.3906C16.2207 15.0684 15.6836 15.0781 15.3516 15.3906ZM10.5664 17.3926C10.0977 17.3926 9.7168 17.7734 9.7168 18.2324L9.7168 20.3418C9.7168 20.8008 10.0977 21.1816 10.5664 21.1816C11.0254 21.1816 11.4062 20.8008 11.4062 20.3418L11.4062 18.2324C11.4062 17.7734 11.0254 17.3926 10.5664 17.3926ZM5.77148 15.3906C5.43945 15.0781 4.89258 15.0684 4.57031 15.3906L3.07617 16.8848C2.75391 17.207 2.75391 17.7441 3.06641 18.0762C3.38867 18.3887 3.94531 18.4082 4.26758 18.0859L5.76172 16.582C6.08398 16.2598 6.08398 15.7227 5.77148 15.3906ZM3.78906 10.5957C3.78906 10.1367 3.39844 9.74609 2.93945 9.74609L0.839844 9.74609C0.380859 9.74609 0 10.1367 0 10.5957C0 11.0547 0.380859 11.4355 0.839844 11.4355L2.93945 11.4355C3.39844 11.4355 3.78906 11.0547 3.78906 10.5957ZM5.76172 5.80078C6.08398 5.48828 6.08398 4.92188 5.77148 4.60938L4.27734 3.10547C3.96484 2.79297 3.4082 2.7832 3.08594 3.10547C2.76367 3.4375 2.76367 3.98438 3.07617 4.29688L4.57031 5.80078C4.89258 6.12305 5.42969 6.12305 5.76172 5.80078Z"
+                                    fill-opacity="0.85" />
+                                <path
+                                    d="M10.5566 15.5664C13.3008 15.5664 15.5273 13.3398 15.5273 10.5957C15.5273 7.85156 13.3008 5.61523 10.5566 5.61523C7.8125 5.61523 5.58594 7.85156 5.58594 10.5957C5.58594 13.3398 7.8125 15.5664 10.5566 15.5664Z"
+                                    fill-opacity="0.85" />
+                            </g>
+                        </svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon">
+                            <!-- Paste moon.fill SVG path here -->
+                            <g>
+                                <rect height="19.7349" opacity="0" width="19.9414" x="0" y="0" />
+                                <path
+                                    d="M10.2344 19.7161C14.4922 19.7161 17.9395 17.1477 19.4727 13.8762C19.8047 13.1926 19.3652 12.7336 18.7109 12.9387C17.9883 13.1829 16.7969 13.4172 15.6934 13.4172C9.83398 13.4172 6.47461 10.0579 6.47461 4.18873C6.47461 3.08521 6.71875 1.84498 7.07031 0.956304C7.35352 0.233648 6.85547-0.205805 6.16211 0.0969294C2.65625 1.62037 0 5.20435 0 9.48169C0 15.136 4.58984 19.7161 10.2344 19.7161Z"
+                                    fill-opacity="0.85" />
+                            </g>
+                        </svg>
+                    </span>
                 </button>
             </div>
         </div>
@@ -306,19 +329,19 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
                 <span class="range-meta-label">Min Year: <strong>{{ yearMin }}</strong></span>
                 <input type="range" :min="bounds.modelYear.min" :max="bounds.modelYear.max" step="1"
                     v-model.number="yearMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 100%)` }" />
+                    :style="{ background: `linear-gradient(to right, var(--accent-primary) 0%, var(--accent-primary) ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 ${getPercent(yearMin, bounds.modelYear.min, bounds.modelYear.max)}%, #e2e8f0 100%)` }" />
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min EPA Range: <strong>{{ rangeMin }} mi</strong></span>
                 <input type="range" :min="bounds.epaCombinedRangeMiles.min" :max="bounds.epaCombinedRangeMiles.max"
                     step="10" v-model.number="rangeMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 100%)` }" />
+                    :style="{ background: `linear-gradient(to right, var(--accent-primary) 0%, var(--accent-primary) ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 ${getPercent(rangeMin, bounds.epaCombinedRangeMiles.min, bounds.epaCombinedRangeMiles.max)}%, #e2e8f0 100%)` }" />
             </div>
             <div class="compact-range-group">
                 <span class="range-meta-label">Min DC Charge: <strong>{{ speedMin }} kW</strong></span>
                 <input type="range" :min="bounds.dcChargingSpeedKilowatts.min"
                     :max="bounds.dcChargingSpeedKilowatts.max" step="25" v-model.number="speedMin" @input="syncAndEmit"
-                    :style="{ background: `linear-gradient(to right, #2563eb 0%, #2563eb ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 100%)` }" />
+                    :style="{ background: `linear-gradient(to right, var(--accent-primary) 0%, var(--accent-primary) ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 ${getPercent(speedMin, bounds.dcChargingSpeedKilowatts.min, bounds.dcChargingSpeedKilowatts.max)}%, #e2e8f0 100%)` }" />
             </div>
         </div>
 
@@ -362,8 +385,8 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
 <style scoped>
 .compact-filter-dashboard {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 66px -1px rgba(0, 0, 0, 0.05);
@@ -374,8 +397,8 @@ watch(selectedFilters, () => { syncAndEmit(); }, { deep: true });
 }
 
 html.dark .compact-filter-dashboard {
-    background: #1e293b;
-    border-color: #334155;
+    background: var(--bg-primary);
+    border-color: var(--border-color);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
@@ -389,11 +412,11 @@ html.dark .compact-filter-dashboard {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 html.dark .filter-header h3 {
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .reset-filters-action-btn {
@@ -410,19 +433,19 @@ html.dark .filter-header h3 {
 
 .reset-filters-action-btn:hover {
     background-color: #e2e8f0;
-    color: #0f172a;
+    color: var(--text-primary);
     border-color: #94a3b8;
 }
 
 html.dark .reset-filters-action-btn {
     background-color: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 html.dark .reset-filters-action-btn:hover {
-    background-color: #1e293b;
-    color: #ffffff;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     border-color: #475569;
 }
 
@@ -435,7 +458,7 @@ html.dark .reset-filters-action-btn:hover {
 }
 
 html.dark .active-chips-line {
-    border-bottom-color: #334155;
+    border-bottom-color: var(--border-color);
 }
 
 .filter-chip {
@@ -452,7 +475,7 @@ html.dark .active-chips-line {
 
 html.dark .filter-chip {
     background: #1e3a8a;
-    border-color: #2563eb;
+    border-color: var(--accent-primary);
     color: #eff6ff;
 }
 
@@ -498,7 +521,7 @@ html.dark .sliders-row {
 }
 
 html.dark .range-meta-label {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .compact-range-group input[type="range"] {
@@ -521,7 +544,7 @@ html.dark .compact-range-group input[type="range"] {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #2563eb;
+    background: var(--accent-primary);
 }
 
 html.dark .compact-range-group input[type="range"]::-webkit-slider-thumb {
@@ -540,7 +563,7 @@ html.dark .compact-range-group input[type="range"]::-webkit-slider-thumb {
 }
 
 .dropdown-trigger-btn {
-    background: #ffffff;
+    background: var(--bg-primary);
     border: 1px solid #cbd5e1;
     padding: 6px 12px;
     border-radius: 6px;
@@ -561,18 +584,18 @@ html.dark .compact-range-group input[type="range"]::-webkit-slider-thumb {
 
 html.dark .dropdown-trigger-btn {
     background: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 html.dark .dropdown-trigger-btn:hover {
     background: #243347;
     border-color: #475569;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .dropdown-trigger-btn.has-active-selections {
-    border-color: #2563eb;
+    border-color: var(--accent-primary);
     background: #f0f5ff;
     color: #1d4ed8;
 }
@@ -580,11 +603,11 @@ html.dark .dropdown-trigger-btn:hover {
 html.dark .dropdown-trigger-btn.has-active-selections {
     border-color: #38bdf8;
     background: #1e3a8a;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .counter-badge {
-    background: #2563eb;
+    background: var(--accent-primary);
     color: white;
     font-size: 10px;
     padding: 1px 5px;
@@ -594,7 +617,7 @@ html.dark .dropdown-trigger-btn.has-active-selections {
 
 html.dark .counter-badge {
     background: #38bdf8;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .dropdown-popover-box {
@@ -602,7 +625,7 @@ html.dark .counter-badge {
     top: 100%;
     left: 0;
     margin-top: 6px;
-    background: #ffffff;
+    background: var(--bg-primary);
     border: 1px solid #cbd5e1;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
     border-radius: 8px;
@@ -634,7 +657,7 @@ html.dark .dropdown-popover-box {
 }
 
 html.dark .popover-checkbox-item {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .popover-checkbox-item:hover {
@@ -642,8 +665,8 @@ html.dark .popover-checkbox-item {
 }
 
 html.dark .popover-checkbox-item:hover {
-    background: #1e293b;
-    color: #ffffff;
+    background: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 .full-width-anchor {
@@ -654,17 +677,17 @@ html.dark .popover-checkbox-item:hover {
     width: 100%;
     justify-content: center;
     background: #f1f5f9;
-    border-color: #e2e8f0;
+    border-color: var(--border-color);
 }
 
 html.dark .features-trigger-btn {
     background: #0f172a;
-    border-color: #334155;
+    border-color: var(--border-color);
     color: #38bdf8;
 }
 
 html.dark .features-trigger-btn:hover {
-    background: #1e293b;
+    background: var(--bg-primary);
     border-color: #475569;
 }
 
@@ -673,7 +696,7 @@ html.dark .features-trigger-btn:hover {
     top: 100%;
     left: 0;
     width: 100%;
-    background: #ffffff;
+    background: var(--bg-primary);
     border: 1px solid #cbd5e1;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
     border-radius: 8px;
@@ -698,12 +721,12 @@ html.dark .features-popover-grid {
     padding: 4px 8px;
     background: #f8fafc;
     border-radius: 6px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-color);
 }
 
 html.dark .feature-toggle-pill {
-    background: #1e293b;
-    border-color: #334155;
+    background: var(--bg-primary);
+    border-color: var(--border-color);
 }
 
 .feature-pill-title {
@@ -713,7 +736,7 @@ html.dark .feature-toggle-pill {
 }
 
 html.dark .feature-pill-title {
-    color: #cbd5e1;
+    color: var(--text-primary);
 }
 
 .feature-select-box {
@@ -728,7 +751,7 @@ html.dark .feature-pill-title {
 html.dark .feature-select-box {
     background: #0f172a;
     border-color: #475569;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .filter-actions-group {
@@ -757,21 +780,29 @@ html.dark .feature-select-box {
 .theme-toggle-btn:hover,
 .reset-filters-action-btn:hover {
     background-color: #e2e8f0;
-    color: #0f172a;
+    color: var(--text-primary);
     border-color: #94a3b8;
 }
 
 html.dark .theme-toggle-btn,
 html.dark .reset-filters-action-btn {
     background-color: #0f172a;
-    border-color: #334155;
-    color: #cbd5e1;
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 html.dark .theme-toggle-btn:hover,
 html.dark .reset-filters-action-btn:hover {
-    background-color: #1e293b;
-    color: #ffffff;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     border-color: #475569;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    fill: var(--text-primary)
 }
 </style>

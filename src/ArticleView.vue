@@ -68,7 +68,7 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     <main class="article-view">
         <div v-if="isLoading" class="status-message">Loading article...</div>
         <div v-else-if="hasError" class="status-message error">Article "{{ props.title }}" could not be loaded.</div>
-        <article v-else v-html="articleHtml" class="markdown-body" :class="{ 'force-dark-colors': isDark }" />
+        <article v-else v-html="articleHtml" class="markdown-body" />
     </main>
 </template>
 
@@ -92,7 +92,7 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 }
 
 :deep(.markdown-body) {
-    color: #1e293b;
+    color: var(--bg-primary);
     font-size: 0.9rem;
     word-break: break-word;
     overflow-wrap: break-word;
@@ -101,7 +101,7 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 :deep(.markdown-body) h1,
 :deep(.markdown-body) h2,
 :deep(.markdown-body) h3 {
-    color: #0f172a;
+    color: var(--text-primary);
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
     font-weight: 700;
@@ -146,21 +146,13 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
     display: none !important;
 }
 
-.force-dark-colors:deep(p),
-.force-dark-colors:deep(li),
-.force-dark-colors:deep(code),
-.force-dark-colors:deep(pre),
-.force-dark-colors:deep(span) {
-    color: #cbd5e1 !important;
+:deep(.markdown-body) {
+    color: var(--text-primary);
 }
 
-.force-dark-colors:deep(mjx-container) {
-    color: #ffffff !important;
-}
-
-.force-dark-colors:deep(h1),
-.force-dark-colors:deep(h2),
-.force-dark-colors:deep(h3) {
-    color: #ffffff !important;
+:deep(.markdown-body) h1,
+:deep(.markdown-body) h2,
+:deep(.markdown-body) h3 {
+    color: var(--text-primary);
 }
 </style>
