@@ -334,7 +334,7 @@ html.dark .spec-label {
 }
 
 .spec-value {
-    color: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 13px;
     font-weight: 600;
     word-break: break-word;
