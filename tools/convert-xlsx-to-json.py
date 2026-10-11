@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+
+# Install packages first: `cd tools/ && python -m pip install -r requirements.txt --target ./packages`
+
+import sys
+sys.path.insert(0, './packages')
+
 """Converts raw EV dataset Excel files (.xlsx) into clean, camelCase JSON artifacts.
 
 Usage:
