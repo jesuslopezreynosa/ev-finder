@@ -13,7 +13,7 @@ export interface Vehicle {
     modelYear: number;
     manufacturer: string;
     model: string | number;
-    trim: string;
+    trim: string | null;
     market: string;
     driveAxle: string;
     vehicleType: string;
