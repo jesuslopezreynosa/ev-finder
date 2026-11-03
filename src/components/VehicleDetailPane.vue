@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
+
 import type { Vehicle } from '../VehicleGrid.vue';
 import DrivetrainGlyph from './DrivetrainGlyph.vue';
 
-defineProps<{
+const props = defineProps<{
     activeVehicle: Vehicle;
     activeTabId: string;
     technicalCategories: readonly { id: string; title: string; }[];
@@ -13,6 +15,41 @@ const emit = defineEmits<{
     (e: 'close'): void;
     (e: 'select-tab', tabId: string): void;
 }>();
+
+const categoryMappings: Record<string, string[]> = {
+    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
+    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
+    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
+    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
+    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
+    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
+    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
+};
+
+const formatDisplaySpecsForVehicle = (vehicle: Vehicle) => {
+    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
+    return Object.entries(vehicle)
+        .filter(([key, value]) => !skipKeys.includes(key) && value !== null && value !== undefined && value !== '')
+        .map(([key]) => ({ originalKey: key }));
+};
+
+const availableCategories = computed(() => {
+    if (!props.activeVehicle) return props.technicalCategories;
+    const rawSpecs = formatDisplaySpecsForVehicle(props.activeVehicle);
+    return props.technicalCategories.filter(cat => {
+        const targets = (categoryMappings[cat.id] || []).map(k => k.toLowerCase());
+        const matched = rawSpecs.filter(spec => targets.includes(spec.originalKey.toLowerCase()));
+        return matched.length > 0;
+    });
+});
+
+const tabsContainerRef = ref<HTMLElement | null>(null);
+
+const scrollTabs = (direction: number) => {
+    if (tabsContainerRef.value) {
+        tabsContainerRef.value.scrollBy({ left: direction * 180, behavior: 'smooth' });
+    }
+};
 </script>
 
 <template>
@@ -53,12 +90,20 @@ const emit = defineEmits<{
                     </div>
                 </div>
             </div>
-            <div class="tabs-navigation-bar">
-                <button v-for="tab in technicalCategories" :key="tab.id" type="button" class="tab-nav-btn"
-                    :class="{ 'is-active-tab': activeTabId === tab.id }" @click="emit('select-tab', tab.id)">
-                    {{ tab.title }}
-                </button>
+
+            <div class="tabs-container-wrapper">
+                <button class="tab-scroll-arrow left" @click="scrollTabs(-1)"
+                    aria-label="Scroll tabs left">&#10094;</button>
+                <div ref="tabsContainerRef" class="tabs-navigation-bar">
+                    <button v-for="tab in availableCategories" :key="tab.id" type="button" class="tab-nav-btn"
+                        :class="{ 'is-active-tab': activeTabId === tab.id }" @click="emit('select-tab', tab.id)">
+                        {{ tab.title }}
+                    </button>
+                </div>
+                <button class="tab-scroll-arrow right" @click="scrollTabs(1)"
+                    aria-label="Scroll tabs right">&#10095;</button>
             </div>
+
             <div class="tab-content-panel">
                 <div class="specs-matrix-grid">
                     <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
@@ -239,6 +284,44 @@ html.dark .highlight-speed .hero-value {
     color: #facc15;
 }
 
+.tabs-container-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tab-scroll-arrow {
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 28px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    z-index: 2;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.tab-scroll-arrow:hover {
+    background: #ffffff;
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+html.dark .tab-scroll-arrow {
+    background: rgba(28, 37, 65, 0.9);
+    color: #94a3b8;
+}
+
+html.dark .tab-scroll-arrow:hover {
+    background: #1e293b;
+    color: #38bdf8;
+}
+
 .tabs-navigation-bar {
     display: flex;
     gap: 4px;
@@ -247,6 +330,13 @@ html.dark .highlight-speed .hero-value {
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 8px;
+    flex-grow: 1;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+}
+
+.tabs-navigation-bar::-webkit-scrollbar {
+    display: none;
 }
 
 html.dark .tabs-navigation-bar {

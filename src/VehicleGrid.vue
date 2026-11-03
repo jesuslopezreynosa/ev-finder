@@ -326,6 +326,9 @@ const updateFilters = (newFilters: FilterState) => {
 const toggleSelectVehicle = (vehicle: Vehicle) => {
     const key = getVehicleKey(vehicle);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
+    if (selectedVehicleKey.value !== null) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 };
 
 const closeSelectedVehicle = () => {
