@@ -390,7 +390,7 @@ html.dark .tab-nav-btn.is-active-tab {
 }
 
 html.dark .spec-matrix-row {
-    border-bottom-color: var(--bg-primary);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .spec-label {

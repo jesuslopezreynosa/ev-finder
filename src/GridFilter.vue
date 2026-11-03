@@ -75,6 +75,17 @@ const emitChange = defineEmits<{
     (e: 'filter-change', activeFilters: FilterState): void;
 }>();
 
+const iconModules = import.meta.glob('/src/assets/icons/*.svg', {
+    eager: true,
+    import: 'default'
+}) as Record<string, string>;
+
+const getChargingPortIconUrl = (portName: string): string => {
+    if (!portName) return '';
+    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
+    return iconModules[`/src/assets/icons/${filename}.svg`] || '';
+};
+
 const { isDark } = useTheme();
 
 const activePopoverKey = ref<string | null>(null);
@@ -331,6 +342,11 @@ watch(speedMin, () => { syncAndEmit(); });
                             <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
                                 :title="`${option} layout`">
                                 <DrivetrainGlyph :drive-axle="option" :size="15" />
+                            </span>
+                            <span v-else-if="group.key === 'chargingPortTypes'" class="dropdown-drivetrain-glyph-slot"
+                                :title="`${option} port`">
+                                <img :src="getChargingPortIconUrl(option)" :alt="option"
+                                    class="dropdown-charger-icon" />
                             </span>
                         </label>
                     </div>
@@ -736,6 +752,16 @@ html.dark .styled-checkbox:checked {
 
 html.dark .dropdown-drivetrain-glyph-slot {
     color: #94a3b8;
+}
+
+.dropdown-charger-icon {
+    height: 20px;
+    width: auto;
+    object-fit: contain;
+}
+
+html.dark .dropdown-charger-icon {
+    filter: invert(1) brightness(2);
 }
 
 .features-row {

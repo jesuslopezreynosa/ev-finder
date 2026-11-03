@@ -324,12 +324,18 @@ const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
-const toggleSelectVehicle = (vehicle: Vehicle) => {
+const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent) => {
     const key = getVehicleKey(vehicle);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
     if (selectedVehicleKey.value !== null) {
         setTimeout(() => {
-            if (detailsAnchorRef.value) {
+            const isSmallViewport = window.innerWidth < 1024;
+            if (isSmallViewport) {
+                const targetCard = (event.currentTarget as HTMLElement);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else if (detailsAnchorRef.value) {
                 detailsAnchorRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }, 50);
@@ -471,7 +477,7 @@ const evaluateRowDifference = (label: string): boolean => {
                 <div class="grid-container">
                     <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
                         <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                            @click="toggleSelectVehicle(vehicle)">
+                            @click="toggleSelectVehicle(vehicle, $event)">
                             <div class="card-header-actions" @click.stop>
                                 <label class="compare-checkbox-label">
                                     <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
@@ -653,8 +659,9 @@ html.dark .status-counter {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(251, 252, 254, 0.88);
-    backdrop-filter: blur(20px);
+    background: rgba(251, 252, 254, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     padding: 8px 14px;
     border-radius: 9999px;
     border: 1px solid rgba(216, 225, 234, 0.85);
@@ -662,7 +669,7 @@ html.dark .status-counter {
 }
 
 html.dark .floating-compare-bar {
-    background: rgba(28, 37, 65, 0.85);
+    background: rgba(28, 37, 65, 0.82);
     border-color: rgba(51, 65, 85, 0.85);
 }
 
@@ -850,11 +857,13 @@ html.dark .trim-drivetrain-line {
 .charging-speed-pill {
     background: #fefce8;
     color: #854d0e;
+    border: 1px solid #fef08a;
 }
 
 html.dark .charging-speed-pill {
     background-color: rgba(250, 204, 21, 0.15);
     color: #facc15;
+    border-color: transparent;
 }
 
 .drivetrain-pill {
@@ -866,16 +875,19 @@ html.dark .charging-speed-pill {
 html.dark .drivetrain-pill {
     background-color: #334155;
     color: var(--text-primary);
+    border-color: transparent;
 }
 
 .battery-pill {
     background: #f0fdf4;
     color: #166534;
+    border: 1px solid #bbf7d0;
 }
 
 html.dark .battery-pill {
     background-color: rgba(52, 211, 153, 0.15);
     color: #34d399;
+    border-color: transparent;
 }
 
 .specs-preview-summary {
