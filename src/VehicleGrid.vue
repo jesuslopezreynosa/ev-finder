@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, toRaw } from 'vue';
+import { computed, onMounted, onUnmounted, ref, toRaw, type Ref } from 'vue';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
@@ -40,13 +40,15 @@ export interface Vehicle {
     hasAdaptiveCruiseControl: string | null;
     hasGlassRoof: string | null;
     audioPowerWatts: number | null;
-    audioSpeakerCount: number | null;
+    audioSpeakerCount: number | string | null;
     audioSubwooferCount: number | null;
     supportsAudioDolbyAtmos: string | null;
     audioBrand: string | null;
     supportsAppleCarPlayAndAndroidAuto: string | null;
     infotainmentOperatingSystem: string | null;
     infotainmentScreenSizeInches: number | null;
+    infotainmentScreenResolutionPx: string | null;
+    infotainmentScreenPpi: number | null;
     navigationProvider: string | null;
     hasPoweredSeats: string | null;
     hasVentilatedSeats: string | null;
@@ -76,7 +78,7 @@ export interface Vehicle {
     batteryWarranty: string | null;
     driveUnitWarranty: string | null;
     corrosionWarranty: string | null;
-    towingCapacityPounds: string | null;
+    towingCapacityPounds: string | number | null;
     usbPortCount: string | null;
     includedConnectivityFeatures: string | null;
     optionalConnectivityFeatures: string | null;
@@ -216,7 +218,7 @@ const categoryMappings: Record<CategoryId, string[]> = {
         'hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'
     ],
     infotainmentConnectivity: [
-        'includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'
+        'includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'
     ],
     camerasSensors: [
         'driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'
@@ -228,7 +230,7 @@ const categoryMappings: Record<CategoryId, string[]> = {
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
-    const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V'];
+    const acronyms = ['Epa', 'Dc', 'Iso', 'Os', 'Ota', 'Ac', 'V', 'Px', 'Ppi'];
 
     return Object.entries(vehicle)
         .filter(([key, value]) => !skipKeys.includes(key) && value !== null && value !== undefined && value !== '')
@@ -258,6 +260,8 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 'MI': '(mi)',
                 'IN': '(in)',
                 'L': '(L)',
+                'PX': '(px)',
+                'PPI': '(PPI)',
                 'Percent': '%'
             };
 
@@ -424,7 +428,7 @@ const activeVehicleSpecs = computed(() => {
     return getFilteredSpecs(activeVehicle.value, activeTabId.value as CategoryId);
 });
 
-const comparisonRegistry = ref<Map<string, Vehicle>>(new Map());
+const comparisonRegistry = ref(new Map<string, Vehicle>());
 
 const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
@@ -700,7 +704,6 @@ html.dark .status-counter strong {
 .compare-trigger-btn {
     background-color: var(--accent-primary);
     color: #ffffff;
-    /* Changed from var(--text-primary) */
     border: none;
     border-radius: 6px;
     padding: 6px 12px;
@@ -932,9 +935,7 @@ html.dark .trim-drivetrain-line {
 
 html.dark .charging-speed-pill {
     background-color: rgba(250, 204, 21, 0.15);
-    /* Light yellow background */
     color: #facc15;
-    /* Bright yellow text */
     border-color: rgba(250, 204, 21, 0.3);
 }
 
@@ -957,9 +958,7 @@ html.dark .drivetrain-pill {
 
 html.dark .battery-pill {
     background-color: rgba(52, 211, 153, 0.15);
-    /* Light green background */
     color: #34d399;
-    /* Bright green text */
     border-color: rgba(52, 211, 153, 0.3);
 }
 
@@ -1061,7 +1060,6 @@ html.dark .charger-inline-icon {
     bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
-    color: var(--bg-primary);
     color: var(--text-primary);
     font-size: 11px;
     font-weight: 500;
@@ -1104,7 +1102,6 @@ html.dark .tooltip-wrapper::before {
 .tooltip-wrapper:hover::before {
     opacity: 1;
 }
-
 .compare-modal-overlay {
     position: fixed;
     top: 0;
