@@ -326,8 +326,8 @@ watch(speedMin, () => { syncAndEmit(); });
                                 d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
                         </svg>
                         <input type="text" class="popover-search-input"
-                            :placeholder="`Filter ${group.title.toLowerCase()}...`" v-model="popoverSearchQuery"
-                            autofocus />
+                            :placeholder="`Filter ${group.title === 'OS' ? 'OS' : group.title.toLowerCase()}...`"
+                            v-model="popoverSearchQuery" autofocus />
                         <button v-if="popoverSearchQuery.length > 0" type="button" class="popover-search-clear-btn"
                             @click="popoverSearchQuery = ''">&times;</button>
                     </div>
@@ -641,16 +641,17 @@ html.dark .dropdown-popover-box {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
-    background: rgba(246, 248, 251, 0.98);
-    border-bottom: 1px solid rgba(216, 225, 234, 0.8);
-    margin-bottom: 4px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    background: rgba(246, 248, 251, 0.95);
+    border: 1px solid rgba(216, 225, 234, 0.85);
+    margin-bottom: 6px;
+    border-radius: 10px;
     z-index: 5;
 }
 
 html.dark .popover-search-container {
-    background: rgba(28, 37, 65, 0.98);
+    background: rgba(11, 19, 43, 0.85);
+    border-color: rgba(51, 65, 85, 0.85);
 }
 
 .popover-search-icon {
@@ -665,7 +666,7 @@ html.dark .popover-search-container {
     background: transparent;
     border: none;
     outline: none;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-primary);
 }
 
@@ -686,6 +687,7 @@ html.dark .popover-search-container {
     cursor: pointer;
     padding: 6px 10px;
     border-radius: 8px;
+    line-height: 1.4;
 }
 
 html.dark .popover-checkbox-item {
@@ -705,6 +707,8 @@ html.dark .popover-checkbox-item:hover {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
+    min-width: 16px;
+    min-height: 16px;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
     background: #ffffff;
@@ -713,6 +717,7 @@ html.dark .popover-checkbox-item:hover {
     align-items: center;
     justify-content: center;
     position: relative;
+    flex-shrink: 0;
     transition: all 0.15s ease;
 }
 
@@ -748,6 +753,7 @@ html.dark .styled-checkbox:checked {
     display: inline-flex;
     align-items: center;
     color: #64748b;
+    flex-shrink: 0;
 }
 
 html.dark .dropdown-drivetrain-glyph-slot {

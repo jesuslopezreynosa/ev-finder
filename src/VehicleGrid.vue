@@ -649,6 +649,22 @@ html.dark .status-counter {
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.compare-clear-btn:hover {
+    background-color: rgba(100, 116, 139, 0.1);
+}
+
+html.dark .compare-clear-btn {
+    color: #94a3b8;
+    border-color: rgba(71, 85, 105, 0.8);
+}
+
+html.dark .compare-clear-btn:hover {
+    background-color: rgba(148, 163, 184, 0.1);
+    color: #f8fafc;
+    border-color: #64748b;
 }
 
 .floating-compare-bar {
