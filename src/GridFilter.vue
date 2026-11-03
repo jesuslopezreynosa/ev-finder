@@ -53,26 +53,6 @@ type StringCategoryKey =
     | 'infotainmentOperatingSystem'
     | 'audioBrand';
 
-type BooleanFilterKey =
-    | 'supportsBatteryPreconditioning'
-    | 'supportsSuperchargerAccess'
-    | 'supportsPlugAndChargeIso15118'
-    | 'supportsPhoneAsAKey'
-    | 'hasPoweredLiftgate'
-    | 'hasOnePedalDrive'
-    | 'hasAdaptiveCruiseControl'
-    | 'hasGlassRoof'
-    | 'supportsAppleCarPlayAndAndroidAuto'
-    | 'hasPoweredSeats'
-    | 'hasVentilatedSeats'
-    | 'hasHeatedSeats'
-    | 'hasHeatedSteeringWheel'
-    | 'hasHeatPump'
-    | 'hasPoweredSideMirrors'
-    | 'hasBuiltInDashcam'
-    | 'hasPetMode'
-    | 'supportsAudioDolbyAtmos';
-
 interface StringGroupConfig {
     title: string;
     key: StringCategoryKey;
@@ -187,9 +167,11 @@ const activeChipsList = computed(() => {
         const val = selectedFilters.value[k];
         if (Array.isArray(val)) {
             val.forEach(v => chips.push({ categoryKey: k, displayValue: v }));
-        } else if (val === true) {
+        } else if (val === true || val === false) {
             const item = booleanFilters.find(b => b.key === k);
-            if (item) chips.push({ categoryKey: k, displayValue: item.label });
+            if (item) {
+                chips.push({ categoryKey: k, displayValue: `${item.label}: ${val ? 'Yes' : 'No'}` });
+            }
         }
     });
     return chips;
@@ -254,7 +236,7 @@ const removeChip = (chip: { categoryKey: string; displayValue: string; }) => {
     const key = chip.categoryKey as keyof typeof selectedFilters.value;
     const current = selectedFilters.value[key];
     if (Array.isArray(current)) {
-        selectedFilters.value[key] = current.filter(item => item !== chip.displayValue) as any;
+        selectedFilters.value[key] = current.filter(item => item !== chip.displayValue.replace(/:\s(Yes|No)$/, '')) as any;
     } else {
         selectedFilters.value[key] = null as any;
     }
@@ -343,7 +325,8 @@ watch(speedMin, () => { syncAndEmit(); });
                         <label
                             v-for="option in (SEARCHABLE_CATEGORIES.has(group.key) && popoverSearchQuery.trim() ? group.choices.filter(c => c.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim())) : group.choices)"
                             :key="option" class="popover-checkbox-item">
-                            <input type="checkbox" :value="option" v-model="selectedFilters[group.key]" />
+                            <input type="checkbox" :value="option" v-model="selectedFilters[group.key]"
+                                class="styled-checkbox" />
                             <span class="checkbox-custom-label">{{ option }}</span>
                             <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
                                 :title="`${option} layout`">
@@ -699,6 +682,48 @@ html.dark .popover-checkbox-item {
 
 html.dark .popover-checkbox-item:hover {
     background: rgba(11, 19, 43, 0.8);
+}
+
+.styled-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.15s ease;
+}
+
+.styled-checkbox:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.styled-checkbox:checked::after {
+    content: '';
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 2px;
+}
+
+html.dark .styled-checkbox {
+    background: #0f172a;
+    border-color: #475569;
+}
+
+html.dark .styled-checkbox:checked {
+    background: #38bdf8;
+    border-color: #38bdf8;
 }
 
 .dropdown-drivetrain-glyph-slot {

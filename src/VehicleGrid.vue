@@ -187,6 +187,7 @@ const dataBounds = computed(() => {
 
 const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
+const detailsAnchorRef = ref<HTMLElement | null>(null);
 
 const technicalCategories = [
     { id: 'powertrainPerformance', title: 'Powertrain & Performance' },
@@ -327,7 +328,11 @@ const toggleSelectVehicle = (vehicle: Vehicle) => {
     const key = getVehicleKey(vehicle);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
     if (selectedVehicleKey.value !== null) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => {
+            if (detailsAnchorRef.value) {
+                detailsAnchorRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 50);
     }
 };
 
@@ -442,7 +447,7 @@ const evaluateRowDifference = (label: string): boolean => {
 </script>
 
 <template>
-    <div class="grid-layout-wrapper">
+    <div class="grid-layout-wrapper" ref="detailsAnchorRef">
         <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" :active-vehicle-key="selectedVehicleKey"
             @filter-change="updateFilters" />
 
@@ -471,7 +476,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <label class="compare-checkbox-label">
                                     <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
                                         :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                                        @change="toggleCompareVehicle(vehicle)" />
+                                        @change="toggleCompareVehicle(vehicle)" class="styled-checkbox-mini" />
                                     <span>Compare</span>
                                 </label>
                             </div>
@@ -676,7 +681,7 @@ html.dark .floating-compare-bar {
 
 @media (min-width: 1024px) {
     .split-view-layout.has-expanded-card {
-        grid-template-columns: 1fr 2fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
         gap: 20px;
     }
 }
@@ -720,6 +725,63 @@ html.dark .grid-item {
 .grid-item.is-selected {
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.card-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
+.compare-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.styled-checkbox-mini {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.styled-checkbox-mini:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.styled-checkbox-mini:checked::after {
+    content: '';
+    width: 3px;
+    height: 6px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 1px;
+}
+
+html.dark .styled-checkbox-mini {
+    background: #0f172a;
+    border-color: #475569;
+}
+
+html.dark .styled-checkbox-mini:checked {
+    background: #38bdf8;
+    border-color: #38bdf8;
 }
 
 .mobile-only-pane {
