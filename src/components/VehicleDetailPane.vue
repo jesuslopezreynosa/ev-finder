@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import type { Vehicle } from '../VehicleGrid.vue';
 import DrivetrainGlyph from './DrivetrainGlyph.vue';
@@ -43,6 +43,13 @@ const availableCategories = computed(() => {
     });
 });
 
+// Automatically fallback to the leftmost visible tab if the current active tab has no data
+watch(availableCategories, (newCategories) => {
+    if (newCategories.length > 0 && !newCategories.some(cat => cat.id === props.activeTabId)) {
+        emit('select-tab', newCategories[0]!.id);
+    }
+}, { immediate: true });
+
 const tabsContainerRef = ref<HTMLElement | null>(null);
 
 const scrollTabs = (direction: number) => {
@@ -80,7 +87,7 @@ const scrollTabs = (direction: number) => {
                                 class="hero-value-unit">kWh</span>
                         </span>
                         <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
-                        }})</span>
+                            }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
                         <span class="hero-value">

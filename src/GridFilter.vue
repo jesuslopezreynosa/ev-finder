@@ -421,22 +421,27 @@ html.dark .compact-filter-dashboard {
     font-weight: 600;
     border-radius: 9999px;
     cursor: pointer;
-    border: 1px solid rgba(203, 213, 225, 0.8);
-    background-color: rgba(241, 245, 249, 0.85);
-    color: #334155;
+    border: 1px solid rgba(2, 132, 199, 0.35);
+    background-color: rgba(2, 132, 199, 0.08);
+    color: var(--accent-primary);
     transition: all 0.15s ease;
 }
 
 .reset-filters-action-btn:hover {
-    background-color: #ffffff;
-    color: var(--accent-primary);
+    background-color: var(--accent-primary);
+    color: #ffffff;
     border-color: var(--accent-primary);
 }
 
 html.dark .reset-filters-action-btn {
-    background-color: rgba(11, 19, 43, 0.8);
-    border-color: rgba(51, 65, 85, 0.85);
-    color: #e2e8f0;
+    background-color: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+}
+
+html.dark .reset-filters-action-btn:hover {
+    background-color: #38bdf8;
+    color: #0f172a;
 }
 
 .active-chips-line {
@@ -551,18 +556,19 @@ html.dark .slider-value-pill {
 }
 
 .dropdown-trigger-btn {
-    background: rgba(246, 248, 251, 0.9);
-    border: 1px solid rgba(216, 225, 234, 0.85);
+    background: rgba(241, 245, 249, 0.95);
+    border: 1px solid rgba(2, 132, 199, 0.3);
     padding: 6px 14px;
     border-radius: 9999px;
     font-size: 13px;
-    font-weight: 500;
-    color: #334155;
+    font-weight: 600;
+    color: var(--text-primary);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     transition: all 0.18s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .dropdown-trigger-btn:hover {
@@ -572,22 +578,28 @@ html.dark .slider-value-pill {
 }
 
 html.dark .dropdown-trigger-btn {
-    background: rgba(28, 37, 65, 0.9);
-    border-color: rgba(51, 65, 85, 0.85);
-    color: #e2e8f0;
+    background: rgba(11, 19, 43, 0.85);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .dropdown-trigger-btn:hover {
+    background: rgba(28, 37, 65, 0.95);
+    border-color: #38bdf8;
+    color: #38bdf8;
 }
 
 .dropdown-trigger-btn.has-active-selections {
     border-color: var(--accent-primary);
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-weight: 600;
+    background: rgba(2, 132, 199, 0.1);
+    color: var(--accent-primary);
 }
 
 html.dark .dropdown-trigger-btn.has-active-selections {
     border-color: #38bdf8;
-    background: #1e3a8a;
-    color: #f0f9ff;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
 }
 
 .dropdown-chevron-icon {
@@ -784,13 +796,14 @@ html.dark .dropdown-charger-icon {
     justify-content: space-between;
     border-radius: 9999px;
     padding: 8px 18px;
-    background: rgba(246, 248, 251, 0.9);
-    border: 1px solid rgba(216, 225, 234, 0.85);
+    background: rgba(241, 245, 249, 0.95);
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 html.dark .features-trigger-btn {
-    background: rgba(28, 37, 65, 0.9);
-    border-color: rgba(51, 65, 85, 0.85);
+    background: rgba(11, 19, 43, 0.85);
+    border-color: rgba(56, 189, 248, 0.35);
     color: #e2e8f0;
 }
 
@@ -844,16 +857,18 @@ html.dark .feature-pill-title {
 
 .feature-select-box {
     font-size: 12px;
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: 6px;
-    border: 1px solid #cbd5e1;
-    background: white;
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    background: rgba(241, 245, 249, 0.9);
     color: #334155;
+    font-weight: 500;
+    cursor: pointer;
 }
 
 html.dark .feature-select-box {
-    background: #0f172a;
-    border-color: #475569;
+    background: rgba(11, 19, 43, 0.9);
+    border-color: rgba(56, 189, 248, 0.35);
     color: var(--text-primary);
 }
 </style>
