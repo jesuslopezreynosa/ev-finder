@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, toRaw, type Ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, toRaw } from 'vue';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
 import VehicleDetailPane from './components/VehicleDetailPane.vue';
 import VehicleCompareModal from './components/VehicleCompareModal.vue';
+import DrivetrainGlyph from './components/DrivetrainGlyph.vue';
 
 countries.registerLocale(enLocale);
 
@@ -142,14 +143,11 @@ const dynamicFilterOptions = computed(() => {
         const uniqueVals = new Set<string>();
 
         props.vehicles.forEach(v => {
-            let val = v[key];
-
+            const val = v[key];
             if (val === null || val === undefined || val === '') return;
 
             if (Array.isArray(val)) {
-                val.forEach(item => {
-                    if (item) uniqueVals.add(String(item).trim());
-                });
+                val.forEach(item => { if (item) uniqueVals.add(String(item).trim()); });
             } else if (key === 'countryOfAssembly') {
                 const fullCountryName = getCountryNameFromIsoAlphaThreeCode(String(val));
                 if (fullCountryName) uniqueVals.add(fullCountryName);
@@ -189,6 +187,7 @@ const dataBounds = computed(() => {
 
 const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
+const detailsAnchorRef = ref<HTMLElement | null>(null);
 
 const technicalCategories = [
     { id: 'powertrainPerformance', title: 'Powertrain & Performance' },
@@ -201,31 +200,16 @@ const technicalCategories = [
 ] as const;
 
 type CategoryId = (typeof technicalCategories)[number]['id'];
-
 const activeTabId = ref<string>(technicalCategories[0].id);
 
 const categoryMappings: Record<CategoryId, string[]> = {
-    powertrainPerformance: [
-        'hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'
-    ],
-    energyCharging: [
-        'batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'
-    ],
-    dimensions: [
-        'frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'
-    ],
-    cabinConvenience: [
-        'hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'
-    ],
-    infotainmentConnectivity: [
-        'includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'
-    ],
-    camerasSensors: [
-        'driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'
-    ],
-    warranties: [
-        'batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty'
-    ]
+    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
+    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
+    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
+    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
+    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
+    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
+    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
 };
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
@@ -239,42 +223,10 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
             label = label.replace(/([a-z])([A-Z])/g, '$1 $2');
             label = label.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
             label = label.replace(/^./, str => str.toUpperCase());
-            label = label.replace(/([a-zA-Z])(\d+)/g, '$1 $2');
-            label = label.replace(/(\d+)([a-zA-Z])/g, '$1 $2');
-            label = label.replace(/\s+/g, ' ').trim();
-
             acronyms.forEach(acronym => {
                 const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
                 label = label.replace(regex, acronym.toUpperCase());
             });
-
-            label = label.replace(/\bCar\s+Play\b/gi, 'CarPlay');
-            label = label.replace(/\bV\s*2\s*X\b/gi, 'V2X');
-            label = label.replace(/\bAnd\b/g, '&');
-
-            const unitReplacements: Record<string, string> = {
-                'KWH 100 MI': '(kWh / 100mi)',
-                'WH MI': '(Wh/mi)',
-                'KWH': '(kWh)',
-                'KW': '(kW)',
-                'MI': '(mi)',
-                'IN': '(in)',
-                'L': '(L)',
-                'PX': '(px)',
-                'PPI': '(PPI)',
-                'Percent': '%'
-            };
-
-            for (const [rawTarget, formattedValue] of Object.entries(unitReplacements)) {
-                const targetRegex = new RegExp(`\\b${rawTarget}$`, 'i');
-                if (targetRegex.test(label)) {
-                    label = label.replace(targetRegex, formattedValue);
-                    break;
-                }
-            }
-
-            label = label.replace(/(\d+)\s+V\b/g, '$1V');
-            label = label.replace(/\s+/g, ' ').trim();
 
             let displayValue = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
@@ -290,33 +242,21 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
 const getFilteredSpecs = (vehicle: Vehicle, tabId: CategoryId) => {
     const rawSpecs = formatDisplaySpecs(vehicle);
     const targets = (categoryMappings[tabId] || []).map(k => k.toLowerCase());
-    return rawSpecs.filter(spec =>
-        targets.includes(spec.originalKey.toLowerCase())
-    );
+    return rawSpecs.filter(spec => targets.includes(spec.originalKey.toLowerCase()));
 };
 
 const evaluateFeaturePresence = (key: string, rawValue: unknown): boolean => {
     if (rawValue === null || rawValue === undefined) return false;
     if (typeof rawValue === 'boolean') return rawValue;
     if (typeof rawValue === 'number') return rawValue > 0;
-
     const cleanStr = String(rawValue).trim().toLowerCase();
     if (cleanStr === 'yes' || cleanStr === 'true' || cleanStr === '1') return true;
     if (cleanStr === 'no' || cleanStr === 'false' || cleanStr === '0' || cleanStr === 'none') return false;
-
-    switch (key) {
-        case 'hasAdaptiveCruiseControl':
-            return !cleanStr.includes('no');
-        case 'supportsAppleCarPlayAndAndroidAuto':
-            return cleanStr.includes('yes') || cleanStr.includes('true') || cleanStr.includes('wireless') || cleanStr.includes('wired');
-        default:
-            return cleanStr.length > 0;
-    }
+    return cleanStr.length > 0;
 };
 
 const filteredVehicles = computed(() => {
     if (!currentFilters.value) return props.vehicles;
-
     const filters = currentFilters.value;
 
     return props.vehicles.filter(vehicle => {
@@ -328,9 +268,7 @@ const filteredVehicles = computed(() => {
         const matchesStrings = stringCategories.every(key => {
             const selections = filters[key];
             if (!selections || selections.length === 0) return true;
-
-            let rawValue = vehicle[key];
-
+            const rawValue = vehicle[key];
             if (rawValue === null || rawValue === undefined) return false;
 
             let targetValues: string[] = [];
@@ -343,7 +281,6 @@ const filteredVehicles = computed(() => {
             } else {
                 targetValues = [String(rawValue).trim()];
             }
-
             return targetValues.some(val => selections.includes(val));
         });
 
@@ -357,19 +294,7 @@ const filteredVehicles = computed(() => {
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
             if (filterVal === null || filterVal === undefined) return true;
-
-            let vehicleValue = vehicle[key];
-            if (vehicleValue === undefined) {
-                const lowKey = key.toLowerCase();
-                const cleanLowKey = lowKey.replace(/^(has|support|supports)/, '');
-                const foundKey = Object.keys(vehicle).find(vKey => {
-                    const target = vKey.toLowerCase();
-                    return target === lowKey || target.replace(/^(has|support|supports)/, '') === cleanLowKey;
-                });
-                if (foundKey) vehicleValue = vehicle[foundKey];
-            }
-
-            return evaluateFeaturePresence(key, vehicleValue) === filterVal;
+            return evaluateFeaturePresence(key, vehicle[key]) === filterVal;
         });
 
         const vehicleYear = Number(vehicle.modelYear);
@@ -380,38 +305,41 @@ const filteredVehicles = computed(() => {
         const filterRangeMin = Number(filters.epaCombinedRangeMiles?.min ?? 0);
         const filterSpeedMin = Number(filters.dcChargingSpeedKilowatts?.min ?? 0);
 
-        const matchesYear = isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin);
-        const matchesRange = isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin);
-        const matchesSpeed = isNaN(filterSpeedMin) || filterSpeedMin <= 0 || (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin);
-
-        return matchesStrings && matchesBooleans && matchesYear && matchesRange && matchesSpeed;
+        return (
+            matchesStrings &&
+            matchesBooleans &&
+            (isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin)) &&
+            (isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin)) &&
+            (isNaN(filterSpeedMin) || filterSpeedMin <= 0 || (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin))
+        );
     });
 });
 
 const getVehicleKey = (v: Vehicle): string => {
     if (v.id) return String(v.id);
-    const keyParts = [
-        v.modelYear,
-        v.manufacturer,
-        v.model,
-        v.trim,
-        v.driveAxle,
-        v.market,
-        v.batteryChemistry,
-        v.dcChargingSpeedKilowatts,
-        v.netBatteryCapacityKilowattHours
-    ].map(p => String(p ?? '').trim());
-
-    return keyParts.filter(Boolean).join('-');
+    return [v.modelYear, v.manufacturer, v.model, v.trim, v.driveAxle].map(p => String(p ?? '').trim()).filter(Boolean).join('-');
 };
 
 const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
-const toggleSelectVehicle = (vehicle: Vehicle) => {
+const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent) => {
     const key = getVehicleKey(vehicle);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
+    if (selectedVehicleKey.value !== null) {
+        setTimeout(() => {
+            const isSmallViewport = window.innerWidth < 1024;
+            if (isSmallViewport) {
+                const targetCard = (event.currentTarget as HTMLElement);
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else if (detailsAnchorRef.value) {
+                detailsAnchorRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 50);
+    }
 };
 
 const closeSelectedVehicle = () => {
@@ -429,7 +357,6 @@ const activeVehicleSpecs = computed(() => {
 });
 
 const comparisonRegistry = ref(new Map<string, Vehicle>());
-
 const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
 
@@ -439,7 +366,6 @@ const isVehicleSelectedForCompare = (vehicle: Vehicle): boolean => {
 
 const toggleCompareVehicle = (vehicle: Vehicle): void => {
     const targetKey = getVehicleKey(vehicle);
-
     if (comparisonRegistry.value.has(targetKey)) {
         comparisonRegistry.value.delete(targetKey);
     } else if (comparisonRegistry.value.size < 4) {
@@ -453,9 +379,7 @@ const clearComparison = (): void => {
 };
 
 const openCompareModal = (): void => {
-    if (comparisonRegistry.value.size > 0) {
-        isCompareModalOpen.value = true;
-    }
+    if (comparisonRegistry.value.size > 0) isCompareModalOpen.value = true;
 };
 
 const closeCompareModal = (): void => {
@@ -472,40 +396,26 @@ const topCompareBarRef = ref<HTMLElement | null>(null);
 const isTopBarVisible = ref<boolean>(true);
 let observer: IntersectionObserver | null = null;
 
-// Tracks visibility of top bar to show/hide the floating compare button when scrolling down
 onMounted(() => {
     if ('IntersectionObserver' in window) {
         observer = new IntersectionObserver(([entry]) => {
             isTopBarVisible.value = entry?.isIntersecting ?? false;
         }, { threshold: 0.1 });
-
-        if (topCompareBarRef.value) {
-            observer.observe(topCompareBarRef.value);
-        }
+        if (topCompareBarRef.value) observer.observe(topCompareBarRef.value);
     }
 });
 
 onUnmounted(() => {
-    if (observer) {
-        observer.disconnect();
-    }
+    if (observer) observer.disconnect();
 });
 
-const isFloatingCompareVisible = computed(() => {
-    return selectedForComparison.value.length > 0 && !isTopBarVisible.value;
-});
+const isFloatingCompareVisible = computed(() => selectedForComparison.value.length > 0 && !isTopBarVisible.value);
 
-interface ComparisonCategory {
-    id: string;
-    title: string;
-    keys: string[];
-}
-
+interface ComparisonCategory { id: string; title: string; keys: string[]; }
 const highlightDifferences = ref<boolean>(true);
 
 const comparisonCategories = computed<ComparisonCategory[]>(() => {
     if (comparisonRegistry.value.size === 0) return [];
-
     const keysSet = new Set<string>();
     const originalKeysMap = new Map<string, string>();
 
@@ -517,7 +427,6 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
     });
 
     const result: ComparisonCategory[] = [];
-
     technicalCategories.forEach(category => {
         const categoryOriginalKeys = (categoryMappings[category.id as CategoryId] || []).map(k => k.toLowerCase());
         const matchedLabels = Array.from(keysSet).filter(label => {
@@ -526,34 +435,28 @@ const comparisonCategories = computed<ComparisonCategory[]>(() => {
         }).sort((a, b) => a.localeCompare(b));
 
         if (matchedLabels.length > 0) {
-            result.push({
-                id: category.id,
-                title: category.title,
-                keys: matchedLabels
-            });
+            result.push({ id: category.id, title: category.title, keys: matchedLabels });
         }
     });
-
     return result;
 });
 
 const evaluateRowDifference = (label: string): boolean => {
     const vehicles = selectedForComparison.value;
     if (vehicles.length <= 1) return false;
-
     const baselineValue = getSpecValueByLabel(vehicles[0]!, label);
     for (let i = 1; i < vehicles.length; i++) {
-        if (getSpecValueByLabel(vehicles[i]!, label) !== baselineValue) {
-            return true;
-        }
+        if (getSpecValueByLabel(vehicles[i]!, label) !== baselineValue) return true;
     }
     return false;
 };
 </script>
 
 <template>
-    <div class="grid-layout-wrapper">
-        <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" @filter-change="updateFilters" />
+    <div class="grid-layout-wrapper" ref="detailsAnchorRef">
+        <GridFilter :bounds="dataBounds" :options="dynamicFilterOptions" :active-vehicle-key="selectedVehicleKey"
+            @filter-change="updateFilters" />
+
         <div ref="topCompareBarRef" class="results-status-bar">
             <span class="status-counter">
                 <strong>{{ filteredVehicles.length }}</strong> of <strong>{{ props.vehicles.length }}</strong> vehicles
@@ -570,69 +473,83 @@ const evaluateRowDifference = (label: string): boolean => {
         </div>
 
         <div class="split-view-layout" :class="{ 'has-expanded-card': selectedVehicleKey !== null }">
-            <div class="grid-container">
-                <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
-                    <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                        @click="toggleSelectVehicle(vehicle)">
-                        <div class="card-header-actions" @click.stop>
-                            <label class="compare-checkbox-label">
-                                <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
-                                    :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                                    @change="toggleCompareVehicle(vehicle)" />
-                                <span>Compare</span>
-                            </label>
-                        </div>
-                        <div class="card-main-meta">
-                            <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
-                            <p class="trim-drivetrain-line">
-                                <strong>{{ vehicle.trim }}</strong>
-                                <span class="pill drivetrain-pill">{{ vehicle.driveAxle }}</span>
-                                <span :data-tooltip="vehicle.batteryChemistry" class="tooltip-wrapper">
-                                    <span class="pill battery-pill">🔋 {{ vehicle.netBatteryCapacityKilowattHours }}
-                                        kWh</span>
-                                </span>
-                                <span class="pill charging-speed-pill">⚡️ {{ vehicle.dcChargingSpeedKilowatts }}
-                                    kW</span>
-                            </p>
-                            <p class="specs-preview-summary">
-                                <span>{{ vehicle.vehicleType }}</span>
-                                <span class="summary-bullet">&bull;</span>
-                                <span>{{ vehicle.epaCombinedRangeMiles }} mi range</span>
-                                <span class="summary-bullet">&bull;</span>
-                                <span class="inline-charger-container">
-                                    <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPortTypes)"
-                                        :key="port" class="inline-charger-item">
-                                        <span :data-tooltip="port" class="tooltip-wrapper">
-                                            <img :src="getChargingPortIconUrl(port)" :alt="port"
-                                                class="charger-inline-icon" />
-                                        </span>
-                                        <span v-if="pIdx < getChargingPortsArray(vehicle.chargingPortTypes).length - 1"
-                                            class="charger-separator">&amp;</span>
+            <div class="vehicles-list-column">
+                <div class="grid-container">
+                    <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
+                        <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
+                            @click="toggleSelectVehicle(vehicle, $event)">
+                            <div class="card-header-actions" @click.stop>
+                                <label class="compare-checkbox-label">
+                                    <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
+                                        :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
+                                        @change="toggleCompareVehicle(vehicle)" class="styled-checkbox-mini" />
+                                    <span>Compare</span>
+                                </label>
+                            </div>
+                            <div class="card-main-meta">
+                                <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
+                                <p class="trim-drivetrain-line">
+                                    <strong>{{ vehicle.trim }}</strong>
+                                    <span class="pill drivetrain-pill">
+                                        <DrivetrainGlyph :drive-axle="vehicle.driveAxle" class="pill-mini-svg"
+                                            :size="13" />
+                                        {{ vehicle.driveAxle }}
                                     </span>
-                                </span>
-                            </p>
+                                    <span :data-tooltip="vehicle.batteryChemistry || undefined" class="tooltip-wrapper">
+                                        <span class="pill battery-pill">
+                                            <svg viewBox="0 0 24 24" class="pill-mini-svg" aria-hidden="true">
+                                                <path
+                                                    d="M17 6H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2v-1h1c.55 0 1-.45 1-1v-4c0-.55-.45-1-1-1h-1V8c0-1.1-.9-2-2-2zm0 10H4V8h13v8z" />
+                                            </svg>
+                                            {{ vehicle.netBatteryCapacityKilowattHours }} kWh
+                                        </span>
+                                    </span>
+                                    <span class="pill charging-speed-pill">
+                                        <svg viewBox="0 0 24 24" class="pill-mini-svg" aria-hidden="true">
+                                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                        </svg>
+                                        {{ vehicle.dcChargingSpeedKilowatts }} kW
+                                    </span>
+                                </p>
+                                <p class="specs-preview-summary">
+                                    <span>{{ vehicle.vehicleType }}</span>
+                                    <span class="summary-bullet">&bull;</span>
+                                    <span>{{ vehicle.epaCombinedRangeMiles }} mi range</span>
+                                    <span class="summary-bullet">&bull;</span>
+                                    <span class="inline-charger-container">
+                                        <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPortTypes)"
+                                            :key="port" class="inline-charger-item">
+                                            <span :data-tooltip="port" class="tooltip-wrapper tooltip-down">
+                                                <img :src="getChargingPortIconUrl(port)" :alt="port"
+                                                    class="charger-inline-icon" />
+                                            </span>
+                                            <span
+                                                v-if="pIdx < getChargingPortsArray(vehicle.chargingPortTypes).length - 1"
+                                                class="charger-separator">&amp;</span>
+                                        </span>
+                                    </span>
+                                </p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Extracted Mobile Details Drawer Component -->
-                    <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
-                        class="mobile-only-pane" :active-vehicle="activeVehicle" :active-tab-id="activeTabId"
-                        :technical-categories="technicalCategories" :active-vehicle-specs="activeVehicleSpecs"
-                        @close="closeSelectedVehicle" @select-tab="(id) => (activeTabId = id)" />
-                </template>
-                <div v-if="filteredVehicles.length === 0" class="no-results">
-                    No vehicles match your selected filters.
+                        <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
+                            class="mobile-only-pane" :active-vehicle="activeVehicle" :active-tab-id="activeTabId"
+                            :technical-categories="technicalCategories" :active-vehicle-specs="activeVehicleSpecs"
+                            @close="closeSelectedVehicle" @select-tab="(id) => (activeTabId = id)" />
+                    </template>
+
+                    <div v-if="filteredVehicles.length === 0" class="no-results">
+                        No vehicles match your selected filters.
+                    </div>
                 </div>
             </div>
 
-            <!-- Extracted Desktop Side-by-Side Panel Component -->
             <VehicleDetailPane v-if="selectedVehicleKey !== null && activeVehicle" class="desktop-only-pane"
                 :active-vehicle="activeVehicle" :active-tab-id="activeTabId" :technical-categories="technicalCategories"
                 :active-vehicle-specs="activeVehicleSpecs" @close="closeSelectedVehicle"
                 @select-tab="(id) => (activeTabId = id)" />
         </div>
 
-        <!-- Floating Compare CTA -->
         <Transition name="fade-float">
             <div v-if="isFloatingCompareVisible" class="floating-compare-bar">
                 <button class="compare-trigger-btn floating-trigger-btn" :disabled="selectedForComparison.length < 2"
@@ -654,28 +571,36 @@ const evaluateRowDifference = (label: string): boolean => {
 
 <style scoped>
 .grid-layout-wrapper {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 0 16px 40px;
     position: relative;
     box-sizing: border-box;
+}
+
+.vehicles-list-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
 }
 
 .results-status-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 16px;
-    padding: 6px 12px;
-    background: #f8fafc;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    margin: 0 0 16px 0;
+    padding: 8px 16px;
+    background: rgba(251, 252, 254, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(216, 225, 234, 0.85);
+    border-radius: 12px;
 }
 
 html.dark .results-status-bar {
-    background-color: var(--bg-primary);
-    border-color: var(--border-color);
+    background: rgba(28, 37, 65, 0.88);
+    border-color: rgba(51, 65, 85, 0.85);
 }
 
 .status-counter {
@@ -684,15 +609,7 @@ html.dark .results-status-bar {
 }
 
 html.dark .status-counter {
-    color: var(--text-primary);
-}
-
-.status-counter strong {
-    color: var(--text-primary);
-}
-
-html.dark .status-counter strong {
-    color: var(--text-primary);
+    color: #cbd5e1;
 }
 
 .compare-actions-bar {
@@ -705,16 +622,16 @@ html.dark .status-counter strong {
     background-color: var(--accent-primary);
     color: #ffffff;
     border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
+    border-radius: 9999px;
+    padding: 6px 14px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: all 0.15s ease;
 }
 
 .compare-trigger-btn:hover:not(:disabled) {
-    background-color: #1d4ed8;
+    background-color: var(--accent-hover);
 }
 
 .compare-trigger-btn:disabled {
@@ -727,16 +644,27 @@ html.dark .status-counter strong {
     background: transparent;
     color: #64748b;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 5px 10px;
+    border-radius: 9999px;
+    padding: 5px 12px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.compare-clear-btn:hover {
+    background-color: rgba(100, 116, 139, 0.1);
 }
 
 html.dark .compare-clear-btn {
     color: #94a3b8;
-    border-color: #475569;
+    border-color: rgba(71, 85, 105, 0.8);
+}
+
+html.dark .compare-clear-btn:hover {
+    background-color: rgba(148, 163, 184, 0.1);
+    color: #f8fafc;
+    border-color: #64748b;
 }
 
 .floating-compare-bar {
@@ -746,67 +674,38 @@ html.dark .compare-clear-btn {
     z-index: 90;
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: var(--bg-primary);
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    gap: 10px;
+    background: rgba(251, 252, 254, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 8px 14px;
+    border-radius: 9999px;
+    border: 1px solid rgba(216, 225, 234, 0.85);
+    box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.16);
 }
 
 html.dark .floating-compare-bar {
-    background: var(--bg-primary);
-    border-color: var(--border-color);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    background: rgba(28, 37, 65, 0.82);
+    border-color: rgba(51, 65, 85, 0.85);
 }
 
 .floating-trigger-btn {
-    padding: 8px 16px;
+    padding: 8px 18px;
     font-size: 14px;
-}
-
-.fade-float-enter-active,
-.fade-float-leave-active {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.fade-float-enter-from,
-.fade-float-leave-to {
-    opacity: 0;
-    transform: translateY(12px);
-}
-
-.card-header-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
-}
-
-.compare-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-}
-
-html.dark .compare-checkbox-label {
-    color: #94a3b8;
 }
 
 .split-view-layout {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 20px;
-    margin-top: 16px;
+    gap: 16px;
+    width: 100%;
     align-items: start;
 }
 
 @media (min-width: 1024px) {
     .split-view-layout.has-expanded-card {
-        grid-template-columns: 1fr 2fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
+        gap: 20px;
     }
 }
 
@@ -815,6 +714,7 @@ html.dark .compare-checkbox-label {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     min-width: 0;
+    width: 100%;
 }
 
 .split-view-layout.has-expanded-card .grid-container {
@@ -822,70 +722,111 @@ html.dark .compare-checkbox-label {
 }
 
 .grid-item {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    padding: 20px;
-    border-radius: 12px;
+    background: rgba(251, 252, 254, 0.94);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(216, 225, 234, 0.85);
+    padding: 18px 20px;
+    border-radius: 16px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
     display: flex;
     flex-direction: column;
-    min-width: 0;
-    box-sizing: border-box;
     position: relative;
-    z-index: 1;
-    overflow: hidden;
 }
 
 html.dark .grid-item {
-    color: var(--bg-primary);
-    border-color: var(--border-color);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    background: rgba(28, 37, 65, 0.94);
+    border-color: rgba(51, 65, 85, 0.85);
 }
 
 .grid-item:hover {
-    border-color: #cbd5e1;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    z-index: 2;
-}
-
-html.dark .grid-item:hover {
-    border-color: #475569;
+    border-color: var(--accent-primary);
+    transform: translateY(-3px);
 }
 
 .grid-item.is-selected {
     border-color: var(--accent-primary);
-    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1), 0 8px 10px -6px rgba(37, 99, 235, 0.05);
-    z-index: 3;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
-html.dark .grid-item.is-selected {
+.card-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
+.compare-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.styled-checkbox-mini {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.styled-checkbox-mini:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.styled-checkbox-mini:checked::after {
+    content: '';
+    width: 3px;
+    height: 6px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 1px;
+}
+
+html.dark .styled-checkbox-mini {
+    background: #0f172a;
+    border-color: #475569;
+}
+
+html.dark .styled-checkbox-mini:checked {
+    background: #38bdf8;
     border-color: #38bdf8;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
 .mobile-only-pane {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
     display: block;
     margin-top: 8px;
-    z-index: 20;
 }
 
 .desktop-only-pane {
     display: none;
-    position: sticky;
-    top: 20px;
-    z-index: 10;
+    position: relative;
+    margin: 0 !important;
 }
 
 @media (min-width: 1024px) {
     .mobile-only-pane {
-        display: none;
+        display: none !important;
     }
 
     .desktop-only-pane {
-        display: block;
+        display: block !important;
     }
 }
 
@@ -893,12 +834,6 @@ html.dark .grid-item.is-selected {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
-    word-break: break-word;
-}
-
-html.dark .grid-item h3 {
     color: var(--text-primary);
 }
 
@@ -922,44 +857,53 @@ html.dark .trim-drivetrain-line {
     font-size: 11px;
     font-weight: 700;
     border: 1px solid transparent;
-    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     gap: 4px;
 }
 
+.pill-mini-svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .charging-speed-pill {
     background: #fefce8;
     color: #854d0e;
+    border: 1px solid #fef08a;
 }
 
 html.dark .charging-speed-pill {
     background-color: rgba(250, 204, 21, 0.15);
     color: #facc15;
-    border-color: rgba(250, 204, 21, 0.3);
+    border-color: transparent;
 }
 
 .drivetrain-pill {
-    background: #eff6ff;
+    background: #eef4fc;
     color: #1e40af;
+    border: 1px solid #d8e4f5;
 }
 
 html.dark .drivetrain-pill {
     background-color: #334155;
     color: var(--text-primary);
-    border-color: #475569;
+    border-color: transparent;
 }
 
 .battery-pill {
     background: #f0fdf4;
     color: #166534;
-    cursor: help;
+    border: 1px solid #bbf7d0;
 }
 
 html.dark .battery-pill {
     background-color: rgba(52, 211, 153, 0.15);
     color: #34d399;
-    border-color: rgba(52, 211, 153, 0.3);
+    border-color: transparent;
 }
 
 .specs-preview-summary {
@@ -970,35 +914,6 @@ html.dark .battery-pill {
     font-size: 13px;
     color: #64748b;
     margin: 0;
-    line-height: 1.4;
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.specs-matrix-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 16px 24px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.spec-matrix-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 8px;
-    min-width: 0;
-    overflow: hidden;
-}
-
-.spec-value {
-    color: var(--bg-primary);
-    font-size: 13px;
-    font-weight: 600;
-    word-break: break-word;
-    overflow-wrap: anywhere;
 }
 
 html.dark .specs-preview-summary {
@@ -1011,34 +926,63 @@ html.dark .specs-preview-summary {
     gap: 6px;
 }
 
-.inline-charger-item {
-    display: inline-flex;
-    align-items: center;
-}
-
 .charger-inline-icon {
     height: 28px;
     width: auto;
     display: inline-block;
     object-fit: contain;
     cursor: help;
-    transition: transform 0.1s ease;
 }
 
 html.dark .charger-inline-icon {
     filter: invert(1) brightness(2);
 }
 
-.charger-inline-icon:hover {
-    transform: scale(1.08);
-}
-
 .charger-separator {
     font-size: 14px;
-    font-weight: 500;
     color: #94a3b8;
     margin-left: 6px;
-    user-select: none;
+}
+
+/* High-Contrast Tooltips */
+.tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+}
+
+.tooltip-wrapper::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 2000;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tooltip-wrapper.tooltip-down::after {
+    top: calc(100% + 8px);
+    bottom: auto;
+    transform: translateX(-50%) translateY(-4px);
+}
+
+.tooltip-wrapper:not([data-tooltip=""]):not([data-tooltip="null"]):hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }
 
 .no-results {
@@ -1046,305 +990,5 @@ html.dark .charger-inline-icon {
     text-align: center;
     padding: 60px;
     color: #64748b;
-}
-
-.tooltip-wrapper {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-.tooltip-wrapper::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    color: var(--text-primary);
-    font-size: 11px;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 5;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: opacity 0.15s ease;
-}
-
-html.dark .tooltip-wrapper::after {
-    background-color: #f8fafc;
-    color: var(--text-primary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.tooltip-wrapper::before {
-    content: '';
-    position: absolute;
-    bottom: 105%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: var(--bg-primary) transparent transparent transparent;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 5;
-    transition: opacity 0.15s ease;
-}
-
-html.dark .tooltip-wrapper::before {
-    border-color: #f8fafc transparent transparent transparent;
-}
-
-.tooltip-wrapper:hover::after,
-.tooltip-wrapper:hover::before {
-    opacity: 1;
-}
-.compare-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(4px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
-
-html.dark .compare-modal-overlay {
-    background-color: rgba(2, 6, 23, 0.8);
-}
-
-.compare-modal {
-    background: var(--bg-primary);
-    border-radius: 12px;
-    width: 100%;
-    max-width: 1200px;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-}
-
-html.dark .compare-modal {
-    background: #0f172a;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-}
-
-.compare-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-html.dark .compare-modal-header {
-    border-bottom-color: var(--bg-primary);
-    background-color: #0f172a;
-}
-
-.compare-modal-header h2 {
-    margin: 0;
-    font-size: 18px;
-    color: var(--text-primary);
-}
-
-html.dark .compare-modal-header h2 {
-    color: #f8fafc;
-}
-
-.compare-close-btn {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #64748b;
-    transition: color 0.15s ease;
-}
-
-html.dark .compare-close-btn {
-    color: #94a3b8;
-}
-
-html.dark .compare-close-btn:hover {
-    color: #f8fafc;
-}
-
-.compare-modal-body {
-    padding: 24px;
-    overflow-x: auto;
-    overflow-y: auto;
-}
-
-html.dark .compare-modal-body {
-    background-color: #0f172a;
-}
-
-.compare-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-    table-layout: fixed;
-}
-
-.compare-table th,
-.compare-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 13px;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    color: #334155;
-}
-
-html.dark .compare-table th,
-html.dark .compare-table td {
-    border-bottom-color: var(--bg-primary);
-    color: #e2e8f0;
-}
-
-.col-spec-header {
-    width: 20%;
-    color: var(--text-primary);
-    font-weight: 700;
-}
-
-html.dark .col-spec-header {
-    color: #f8fafc;
-}
-
-.compare-column-header {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    padding-top: 8px;
-}
-
-.compare-column-header strong {
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
-html.dark .compare-column-header strong {
-    color: #f8fafc;
-}
-
-.compare-column-header span {
-    color: #64748b;
-    font-size: 12px;
-}
-
-html.dark .compare-column-header span {
-    color: #94a3b8;
-}
-
-.remove-v-btn {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ef4444;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.15s ease;
-}
-
-.remove-v-btn:hover {
-    background: #dc2626;
-}
-
-.compare-spec-key {
-    font-weight: 600;
-    color: #475569;
-    background: #f8fafc;
-}
-
-html.dark .compare-spec-key {
-    color: #f1f5f9;
-    background: var(--bg-primary);
-}
-
-.compare-header-controls {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.toggle-differences-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    user-select: none;
-}
-
-html.dark .toggle-differences-label {
-    color: var(--text-primary);
-}
-
-.category-header-row td {
-    background-color: #f1f5f9;
-    padding: 10px 16px;
-    border-bottom: 2px solid #cbd5e1;
-    border-top: 2px solid #cbd5e1;
-}
-
-html.dark .category-header-row td {
-    background-color: var(--bg-primary);
-    border-bottom-color: #475569;
-    border-top-color: #475569;
-}
-
-.category-header-row h3 {
-    margin: 0;
-    font-size: 12px;
-    color: #334155;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 700;
-}
-
-html.dark .category-header-row h3 {
-    color: #94a3b8;
-}
-
-.diff-highlight td {
-    background-color: #fef08a !important;
-    color: #854d0e !important;
-}
-
-html.dark .diff-highlight td {
-    background-color: #422006 !important;
-    color: #fde047 !important;
-}
-
-.diff-highlight .compare-spec-key {
-    background-color: #fde047 !important;
-    color: #713f12 !important;
-}
-
-html.dark .diff-highlight .compare-spec-key {
-    background-color: #713f12 !important;
-    color: #fef08a !important;
 }
 </style>

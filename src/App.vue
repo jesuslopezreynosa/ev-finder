@@ -9,14 +9,12 @@ import ArticleView from './ArticleView.vue';
 
 useTheme();
 
-// Track which layout or article is currently active
 const currentView = ref<string>('grid');
 
 function setView(viewName: string): void {
     currentView.value = viewName;
 }
 
-// Sort by these parameters in order: (Manufacturer, Model, Model Year)
 const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
     return (
         String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
@@ -36,13 +34,13 @@ const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
 
 <style>
 :root {
-    --bg-primary: #f1f5f9;
-    --bg-card: #ffffff;
+    --bg-primary: #eef2f6;
+    --bg-card: #fcfdfd;
     --text-primary: #1e293b;
-    --text-secondary: #64748b;
+    --text-secondary: #5a6a80;
     --accent-primary: #0284c7;
     --accent-hover: #0369a1;
-    --border-color: #cbd5e1;
+    --border-color: #d8e1ea;
 }
 
 html.dark {
@@ -62,5 +60,6 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color 0.2s ease, color 0.2s ease;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 </style>

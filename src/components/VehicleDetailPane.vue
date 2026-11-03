@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import type { Vehicle } from '../VehicleGrid.vue';
+import { computed, ref, watch } from 'vue';
 
-defineProps<{
+import type { Vehicle } from '../VehicleGrid.vue';
+import DrivetrainGlyph from './DrivetrainGlyph.vue';
+
+const props = defineProps<{
     activeVehicle: Vehicle;
     activeTabId: string;
     technicalCategories: readonly { id: string; title: string; }[];
@@ -12,6 +15,48 @@ const emit = defineEmits<{
     (e: 'close'): void;
     (e: 'select-tab', tabId: string): void;
 }>();
+
+const categoryMappings: Record<string, string[]> = {
+    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
+    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
+    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
+    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
+    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
+    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
+    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
+};
+
+const formatDisplaySpecsForVehicle = (vehicle: Vehicle) => {
+    const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
+    return Object.entries(vehicle)
+        .filter(([key, value]) => !skipKeys.includes(key) && value !== null && value !== undefined && value !== '')
+        .map(([key]) => ({ originalKey: key }));
+};
+
+const availableCategories = computed(() => {
+    if (!props.activeVehicle) return props.technicalCategories;
+    const rawSpecs = formatDisplaySpecsForVehicle(props.activeVehicle);
+    return props.technicalCategories.filter(cat => {
+        const targets = (categoryMappings[cat.id] || []).map(k => k.toLowerCase());
+        const matched = rawSpecs.filter(spec => targets.includes(spec.originalKey.toLowerCase()));
+        return matched.length > 0;
+    });
+});
+
+// Automatically fallback to the leftmost visible tab if the current active tab has no data
+watch(availableCategories, (newCategories) => {
+    if (newCategories.length > 0 && !newCategories.some(cat => cat.id === props.activeTabId)) {
+        emit('select-tab', newCategories[0]!.id);
+    }
+}, { immediate: true });
+
+const tabsContainerRef = ref<HTMLElement | null>(null);
+
+const scrollTabs = (direction: number) => {
+    if (tabsContainerRef.value) {
+        tabsContainerRef.value.scrollBy({ left: direction * 180, behavior: 'smooth' });
+    }
+};
 </script>
 
 <template>
@@ -25,6 +70,7 @@ const emit = defineEmits<{
                 <div class="hero-meta-block">
                     <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
                     <span class="hero-subtitle-text">
+                        <DrivetrainGlyph :drive-axle="activeVehicle.driveAxle" class="pill-mini-svg" :size="13" />
                         {{ activeVehicle.driveAxle }} &bull; {{ activeVehicle.vehicleType }}
                     </span>
                 </div>
@@ -40,7 +86,8 @@ const emit = defineEmits<{
                             {{ activeVehicle.netBatteryCapacityKilowattHours || '—' }}<span
                                 class="hero-value-unit">kWh</span>
                         </span>
-                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || '' }})</span>
+                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
+                            }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
                         <span class="hero-value">
@@ -50,17 +97,25 @@ const emit = defineEmits<{
                     </div>
                 </div>
             </div>
-            <div class="tabs-navigation-bar">
-                <button v-for="tab in technicalCategories" :key="tab.id" type="button" class="tab-nav-btn"
-                    :class="{ 'is-active-tab': activeTabId === tab.id }" @click="emit('select-tab', tab.id)">
-                    {{ tab.title }}
-                </button>
+
+            <div class="tabs-container-wrapper">
+                <button class="tab-scroll-arrow left" @click="scrollTabs(-1)"
+                    aria-label="Scroll tabs left">&#10094;</button>
+                <div ref="tabsContainerRef" class="tabs-navigation-bar">
+                    <button v-for="tab in availableCategories" :key="tab.id" type="button" class="tab-nav-btn"
+                        :class="{ 'is-active-tab': activeTabId === tab.id }" @click="emit('select-tab', tab.id)">
+                        {{ tab.title }}
+                    </button>
+                </div>
+                <button class="tab-scroll-arrow right" @click="scrollTabs(1)"
+                    aria-label="Scroll tabs right">&#10095;</button>
             </div>
+
             <div class="tab-content-panel">
                 <div class="specs-matrix-grid">
                     <div v-for="spec in activeVehicleSpecs" :key="spec.label" class="spec-matrix-row">
                         <span class="spec-label">{{ spec.label }}</span>
-                        <span class="spec-value">{{ spec.val }}</span>
+                        <span class="spec-value">{{ String(spec.val) }}</span>
                     </div>
 
                     <div v-if="activeVehicleSpecs.length === 0" class="empty-tab-notice">
@@ -74,14 +129,21 @@ const emit = defineEmits<{
 
 <style scoped>
 .expanded-detail-pane {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+    background: rgba(251, 252, 254, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(216, 225, 234, 0.9);
+    border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06);
     position: relative;
     min-width: 0;
     box-sizing: border-box;
+}
+
+html.dark .expanded-detail-pane {
+    background: rgba(28, 37, 65, 0.96);
+    border-color: rgba(51, 65, 85, 0.9);
 }
 
 .expanded-pane-header {
@@ -89,18 +151,14 @@ const emit = defineEmits<{
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
-    margin-bottom: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .expanded-pane-header h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
-    color: var(--text-primary);
-}
-
-html.dark .expanded-pane-header h2 {
     color: var(--text-primary);
 }
 
@@ -114,32 +172,31 @@ html.dark .expanded-pane-header h2 {
 }
 
 html.dark .close-expanded-btn {
-    color: var(--text-primary);
+    color: #94a3b8;
 }
 
 .specs-expanded-drawer {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 }
 
 .hero-specs-dashboard {
-    background: #f8fafc;
-    border-radius: 10px;
+    background: rgba(238, 242, 246, 0.7);
+    border-radius: 14px;
     padding: 20px;
     border: 1px solid var(--border-color);
 }
 
 html.dark .hero-specs-dashboard {
-    background-color: var(--bg-primary);
-    border-color: var(--border-color);
+    background: rgba(11, 19, 43, 0.6);
 }
 
 .hero-meta-block {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .hero-subtitle-pill {
@@ -187,20 +244,9 @@ html.dark .hero-subtitle-text {
     line-height: 1;
 }
 
-@media (min-width: 640px) {
-    .hero-value {
-        font-size: 36px;
-    }
-}
-
-html.dark .hero-value {
-    color: var(--text-primary);
-}
-
 .hero-value-unit {
     font-size: 14px;
     font-weight: 500;
-    letter-spacing: normal;
     color: #64748b;
     margin-left: 4px;
 }
@@ -215,7 +261,6 @@ html.dark .hero-value-unit {
     margin-top: 6px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
 }
 
 html.dark .hero-label {
@@ -246,14 +291,54 @@ html.dark .highlight-speed .hero-value {
     color: #facc15;
 }
 
+.tabs-container-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tab-scroll-arrow {
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 28px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    z-index: 2;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.tab-scroll-arrow:hover {
+    background: #ffffff;
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+html.dark .tab-scroll-arrow {
+    background: rgba(28, 37, 65, 0.9);
+    color: #94a3b8;
+}
+
+html.dark .tab-scroll-arrow:hover {
+    background: #1e293b;
+    color: #38bdf8;
+}
+
 .tabs-navigation-bar {
     display: flex;
     gap: 4px;
-    border-bottom: 2px solid #f1f5f9;
+    border-bottom: 2px solid #cbd5e1;
     overflow-x: auto;
-    max-width: 100%;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    flex-grow: 1;
+    scroll-behavior: smooth;
     scrollbar-width: none;
 }
 
@@ -262,7 +347,7 @@ html.dark .highlight-speed .hero-value {
 }
 
 html.dark .tabs-navigation-bar {
-    border-bottom-color: var(--border-color);
+    border-bottom-color: #334155;
 }
 
 .tab-nav-btn {
@@ -275,27 +360,22 @@ html.dark .tabs-navigation-bar {
     cursor: pointer;
     position: relative;
     bottom: -2px;
-    transition: all 0.15s ease;
     border-bottom: 2px solid transparent;
     flex-shrink: 0;
-    white-space: nowrap;
 }
 
 html.dark .tab-nav-btn {
     color: #94a3b8;
 }
 
-.tab-nav-btn:hover {
-    color: var(--text-primary);
-}
-
-html.dark .tab-nav-btn:hover {
-    color: var(--text-primary);
-}
-
 .tab-nav-btn.is-active-tab {
     color: var(--accent-primary);
     border-bottom-color: var(--accent-primary);
+}
+
+html.dark .tab-nav-btn.is-active-tab {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
 }
 
 .tab-content-panel {
@@ -314,11 +394,10 @@ html.dark .tab-nav-btn:hover {
     gap: 4px;
     border-bottom: 1px solid #f1f5f9;
     padding-bottom: 8px;
-    min-width: 0;
 }
 
 html.dark .spec-matrix-row {
-    border-bottom-color: var(--bg-primary);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .spec-label {
@@ -326,7 +405,6 @@ html.dark .spec-matrix-row {
     font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
 }
 
 html.dark .spec-label {

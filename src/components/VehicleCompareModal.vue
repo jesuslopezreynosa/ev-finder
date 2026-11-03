@@ -7,7 +7,7 @@ interface ComparisonCategory {
     keys: string[];
 }
 
-const props = defineProps<{
+defineProps<{
     isOpen: boolean;
     selectedVehicles: Vehicle[];
     categories: ComparisonCategory[];
@@ -34,7 +34,7 @@ const emit = defineEmits<{
                             @change="emit('update:highlightDifferences', ($event.target as HTMLInputElement).checked)" />
                         Highlight Differences
                     </label>
-                    <button class="compare-close-btn" @click="emit('close')">&times;</button>
+                    <button class="compare-close-btn" @click="emit('close')" type="button">&times;</button>
                 </div>
             </div>
             <div class="compare-modal-body">
@@ -42,10 +42,12 @@ const emit = defineEmits<{
                     <thead>
                         <tr>
                             <th class="col-spec-header">Specification</th>
-                            <th v-for="v in selectedVehicles" :key="v.modelYear + v.manufacturer + v.model + v.trim"
+                            <th v-for="v in selectedVehicles"
+                                :key="v.modelYear + v.manufacturer + v.model + (v.trim ?? '')"
                                 class="col-vehicle-header" :style="{ width: `calc(80% / ${selectedVehicles.length})` }">
                                 <div class="compare-column-header">
-                                    <button class="remove-v-btn" @click="emit('toggleCompare', v)">&times;</button>
+                                    <button class="remove-v-btn" @click="emit('toggleCompare', v)"
+                                        type="button">&times;</button>
                                     <strong>{{ v.modelYear }} {{ v.manufacturer }} {{ v.model }}</strong>
                                     <span>{{ v.trim }}</span>
                                 </div>
@@ -61,7 +63,8 @@ const emit = defineEmits<{
                         <tr v-for="keyLabel in category.keys" :key="keyLabel"
                             :class="{ 'diff-highlight': highlightDifferences && evaluateRowDifference(keyLabel) }">
                             <td class="compare-spec-key">{{ keyLabel }}</td>
-                            <td v-for="v in selectedVehicles" :key="v.modelYear + v.manufacturer + v.model + v.trim">
+                            <td v-for="v in selectedVehicles"
+                                :key="v.modelYear + v.manufacturer + v.model + (v.trim ?? '')">
                                 {{ getSpecValueByLabel(v, keyLabel) }}
                             </td>
                         </tr>
@@ -80,7 +83,7 @@ const emit = defineEmits<{
     right: 0;
     bottom: 0;
     background-color: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
     z-index: 100;
     display: flex;
     align-items: center;
@@ -89,25 +92,26 @@ const emit = defineEmits<{
 }
 
 html.dark .compare-modal-overlay {
-    background-color: rgba(2, 6, 23, 0.8);
+    background-color: rgba(2, 6, 23, 0.85);
 }
 
 .compare-modal {
-    background: var(--bg-primary);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(203, 213, 225, 0.85);
+    border-radius: 16px;
     width: 100%;
     max-width: 1200px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
     overflow: hidden;
 }
 
 html.dark .compare-modal {
-    background: #0f172a;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.98);
+    border-color: rgba(51, 65, 85, 0.9);
 }
 
 .compare-modal-header {
@@ -118,19 +122,11 @@ html.dark .compare-modal {
     border-bottom: 1px solid var(--border-color);
 }
 
-html.dark .compare-modal-header {
-    border-bottom-color: var(--bg-primary);
-    background-color: #0f172a;
-}
-
 .compare-modal-header h2 {
     margin: 0;
     font-size: 18px;
+    font-weight: 700;
     color: var(--text-primary);
-}
-
-html.dark .compare-modal-header h2 {
-    color: #f8fafc;
 }
 
 .compare-close-btn {
@@ -139,25 +135,14 @@ html.dark .compare-modal-header h2 {
     font-size: 24px;
     cursor: pointer;
     color: #64748b;
-    transition: color 0.15s ease;
-}
-
-html.dark .compare-close-btn {
-    color: #94a3b8;
-}
-
-html.dark .compare-close-btn:hover {
-    color: #f8fafc;
+    padding: 4px 8px;
+    border-radius: 6px;
 }
 
 .compare-modal-body {
     padding: 24px;
     overflow-x: auto;
     overflow-y: auto;
-}
-
-html.dark .compare-modal-body {
-    background-color: #0f172a;
 }
 
 .compare-table {
@@ -173,13 +158,11 @@ html.dark .compare-modal-body {
     border-bottom: 1px solid var(--border-color);
     font-size: 13px;
     word-wrap: break-word;
-    overflow-wrap: break-word;
     color: #334155;
 }
 
 html.dark .compare-table th,
 html.dark .compare-table td {
-    border-bottom-color: var(--bg-primary);
     color: #e2e8f0;
 }
 
@@ -187,10 +170,6 @@ html.dark .compare-table td {
     width: 20%;
     color: var(--text-primary);
     font-weight: 700;
-}
-
-html.dark .col-spec-header {
-    color: #f8fafc;
 }
 
 .compare-column-header {
@@ -205,17 +184,9 @@ html.dark .col-spec-header {
     font-size: 14px;
 }
 
-html.dark .compare-column-header strong {
-    color: #f8fafc;
-}
-
 .compare-column-header span {
     color: #64748b;
     font-size: 12px;
-}
-
-html.dark .compare-column-header span {
-    color: #94a3b8;
 }
 
 .remove-v-btn {
@@ -229,16 +200,10 @@ html.dark .compare-column-header span {
     width: 18px;
     height: 18px;
     font-size: 12px;
-    line-height: 1;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.15s ease;
-}
-
-.remove-v-btn:hover {
-    background: #dc2626;
 }
 
 .compare-spec-key {
@@ -248,8 +213,8 @@ html.dark .compare-column-header span {
 }
 
 html.dark .compare-spec-key {
+    background: rgba(11, 19, 43, 0.7);
     color: #f1f5f9;
-    background: var(--bg-primary);
 }
 
 .compare-header-controls {
@@ -266,7 +231,6 @@ html.dark .compare-spec-key {
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    user-select: none;
 }
 
 html.dark .toggle-differences-label {
@@ -281,7 +245,7 @@ html.dark .toggle-differences-label {
 }
 
 html.dark .category-header-row td {
-    background-color: var(--bg-primary);
+    background-color: rgba(11, 19, 43, 0.8);
     border-bottom-color: #475569;
     border-top-color: #475569;
 }
@@ -307,15 +271,5 @@ html.dark .category-header-row h3 {
 html.dark .diff-highlight td {
     background-color: #422006 !important;
     color: #fde047 !important;
-}
-
-.diff-highlight .compare-spec-key {
-    background-color: #fde047 !important;
-    color: #713f12 !important;
-}
-
-html.dark .diff-highlight .compare-spec-key {
-    background-color: #713f12 !important;
-    color: #fef08a !important;
 }
 </style>

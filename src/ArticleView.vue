@@ -65,19 +65,37 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 </script>
 
 <template>
-    <main class="article-view">
-        <div v-if="isLoading" class="status-message">Loading article...</div>
-        <div v-else-if="hasError" class="status-message error">Article "{{ props.title }}" could not be loaded.</div>
-        <article v-else v-html="articleHtml" class="markdown-body" />
+    <main class="article-view-container">
+        <div class="article-floating-card">
+            <div v-if="isLoading" class="status-message">Loading article...</div>
+            <div v-else-if="hasError" class="status-message error">Article "{{ props.title }}" could not be loaded.
+            </div>
+            <article v-else v-html="articleHtml" class="markdown-body" />
+        </div>
     </main>
 </template>
 
 <style scoped>
-.article-view {
-    max-width: 800px;
+.article-view-container {
+    max-width: 900px;
     margin: 0 auto;
-    padding: 2rem;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 0 16px 40px;
+    box-sizing: border-box;
+}
+
+.article-floating-card {
+    background: rgba(251, 252, 254, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(216, 225, 234, 0.85);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.05);
+}
+
+html.dark .article-floating-card {
+    background: rgba(28, 37, 65, 0.92);
+    border-color: rgba(51, 65, 85, 0.85);
 }
 
 .status-message {
@@ -92,8 +110,8 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 }
 
 :deep(.markdown-body) {
-    color: var(--bg-primary);
-    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
     word-break: break-word;
     overflow-wrap: break-word;
 }
@@ -144,15 +162,5 @@ watch(targetPath, (newPath) => loadArticle(newPath), { immediate: true });
 
 :deep(mjx-assistive-mml) {
     display: none !important;
-}
-
-:deep(.markdown-body) {
-    color: var(--text-primary);
-}
-
-:deep(.markdown-body) h1,
-:deep(.markdown-body) h2,
-:deep(.markdown-body) h3 {
-    color: var(--text-primary);
 }
 </style>
