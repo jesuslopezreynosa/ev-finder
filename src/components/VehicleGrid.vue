@@ -277,14 +277,38 @@ const filteredVehicles = computed(() => {
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
             'hasGlassRoof', 'supportsAppleCarPlayAndAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
             'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
-            'hasPetMode', 'supportsAudioDolbyAtmos'
+            'hasPetMode', 'supportsAudioDolbyAtmos', 'hasSubwoofers'
         ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
             if (filterVal === null || filterVal === undefined) return true;
+
+            // Special handling for hasSubwoofers since it maps to audioSubwooferCount in the vehicle data
+            if (key === 'hasSubwoofers') {
+                const count = Number(vehicle.audioSubwooferCount);
+                const hasSubs = !isNaN(count) && count > 0;
+                return hasSubs === filterVal;
+            }
+
             return evaluateFeaturePresence(key, vehicle[key]) === filterVal;
         });
+
+        const matchesSpeakers = (() => {
+            const minRequired = Number(filters.minSpeakers);
+            if (isNaN(minRequired) || minRequired <= 0) return true;
+
+            const speakerVal = vehicle.audioSpeakerCount;
+            if (speakerVal === null || speakerVal === undefined) return false;
+
+            const parsedCount = typeof speakerVal === 'number'
+                ? speakerVal
+                : parseInt(String(speakerVal).replace(/[^0-9]/g, ''), 10);
+
+            if (isNaN(parsedCount)) return false;
+
+            return parsedCount >= minRequired;
+        })();
 
         const vehicleYear = Number(vehicle.modelYear);
         const vehicleRange = Number(vehicle.epaCombinedRangeMiles);
@@ -297,6 +321,7 @@ const filteredVehicles = computed(() => {
         return (
             matchesStrings &&
             matchesBooleans &&
+            matchesSpeakers &&
             (isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin)) &&
             (isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin)) &&
             (isNaN(filterSpeedMin) || filterSpeedMin <= 0 || (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin))
@@ -304,17 +329,17 @@ const filteredVehicles = computed(() => {
     });
 });
 
-const getVehicleKey = (v: Vehicle): string => {
-    if (v.id) return String(v.id);
-    return [v.modelYear, v.manufacturer, v.model, v.trim, v.driveAxle].map(p => String(p ?? '').trim()).filter(Boolean).join('-');
+const getVehicleKey = (v: Vehicle, index?: number): string => {
+    const base = v.id ? String(v.id) : [v.modelYear, v.manufacturer, v.model, v.trim, v.market, v.driveAxle, v.epaCombinedRangeMiles].map(p => String(p ?? '').trim()).filter(Boolean).join('-');
+    return index !== undefined ? `${base}-${index}` : base;
 };
 
 const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
-const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent) => {
-    const key = getVehicleKey(vehicle);
+const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent, index: number) => {
+    const key = getVehicleKey(vehicle, index);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
     if (selectedVehicleKey.value !== null) {
         setTimeout(() => {
@@ -337,7 +362,7 @@ const closeSelectedVehicle = () => {
 
 const activeVehicle = computed(() => {
     if (!selectedVehicleKey.value) return null;
-    return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
+    return props.vehicles.find((v, idx) => getVehicleKey(v, idx) === selectedVehicleKey.value) || null;
 });
 
 const activeVehicleSpecs = computed(() => {
@@ -349,12 +374,12 @@ const comparisonRegistry = ref(new Map<string, Vehicle>());
 const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
 
-const isVehicleSelectedForCompare = (vehicle: Vehicle): boolean => {
-    return comparisonRegistry.value.has(getVehicleKey(vehicle));
+const isVehicleSelectedForCompare = (vehicle: Vehicle, index: number): boolean => {
+    return comparisonRegistry.value.has(getVehicleKey(vehicle, index));
 };
 
-const toggleCompareVehicle = (vehicle: Vehicle): void => {
-    const targetKey = getVehicleKey(vehicle);
+const toggleCompareVehicle = (vehicle: Vehicle, index: number): void => {
+    const targetKey = getVehicleKey(vehicle, index);
     if (comparisonRegistry.value.has(targetKey)) {
         comparisonRegistry.value.delete(targetKey);
     } else if (comparisonRegistry.value.size < 4) {
@@ -464,14 +489,15 @@ const evaluateRowDifference = (label: string): boolean => {
         <div class="split-view-layout" :class="{ 'has-expanded-card': selectedVehicleKey !== null }">
             <div class="vehicles-list-column">
                 <div class="grid-container">
-                    <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
-                        <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                            @click="toggleSelectVehicle(vehicle, $event)">
+                    <template v-for="(vehicle, index) in filteredVehicles" :key="getVehicleKey(vehicle, index)">
+                        <div class="grid-item"
+                            :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle, index) }"
+                            @click="toggleSelectVehicle(vehicle, $event, index)">
                             <div class="card-header-actions" @click.stop>
                                 <label class="compare-checkbox-label">
-                                    <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
-                                        :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                                        @change="toggleCompareVehicle(vehicle)" class="styled-checkbox-mini" />
+                                    <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle, index)"
+                                        :disabled="!isVehicleSelectedForCompare(vehicle, index) && selectedForComparison.length >= 4"
+                                        @change="toggleCompareVehicle(vehicle, index)" class="styled-checkbox-mini" />
                                     <span>Compare</span>
                                 </label>
                             </div>
@@ -539,7 +565,7 @@ const evaluateRowDifference = (label: string): boolean => {
                             </div>
                         </div>
 
-                        <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
+                        <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle, index) && activeVehicle"
                             class="mobile-only-pane" :active-vehicle="activeVehicle" :active-tab-id="activeTabId"
                             :technical-categories="technicalCategories" :active-vehicle-specs="activeVehicleSpecs"
                             @close="closeSelectedVehicle" @select-tab="(id) => (activeTabId = id)" />
@@ -572,7 +598,7 @@ const evaluateRowDifference = (label: string): boolean => {
         <VehicleCompareModal :is-open="isCompareModalOpen" :selected-vehicles="selectedForComparison"
             :categories="comparisonCategories" v-model:highlight-differences="highlightDifferences"
             :get-spec-value-by-label="getSpecValueByLabel" :evaluate-row-difference="evaluateRowDifference"
-            @close="closeCompareModal" @toggle-compare="toggleCompareVehicle" />
+            @close="closeCompareModal" @toggle-compare="(v) => toggleCompareVehicle(v, 0)" />
     </div>
 </template>
 

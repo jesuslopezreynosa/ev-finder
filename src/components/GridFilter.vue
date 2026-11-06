@@ -34,6 +34,8 @@ export interface FilterState {
     hasBuiltInDashcam: boolean | null;
     hasPetMode: boolean | null;
     supportsAudioDolbyAtmos: boolean | null;
+    hasSubwoofers: boolean | null;
+    minSpeakers: number | null;
 }
 
 interface RangeBounds { min: number; max: number; }
@@ -139,7 +141,9 @@ const selectedFilters = ref({
     hasPoweredSideMirrors: null as boolean | null,
     hasBuiltInDashcam: null as boolean | null,
     hasPetMode: null as boolean | null,
-    supportsAudioDolbyAtmos: null as boolean | null
+    supportsAudioDolbyAtmos: null as boolean | null,
+    hasSubwoofers: null as boolean | null,
+    minSpeakers: null as number | null
 });
 
 const booleanFilters = [
@@ -160,7 +164,8 @@ const booleanFilters = [
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
     { key: 'hasBuiltInDashcam', label: 'Built-in Dashcam' },
     { key: 'hasPetMode', label: 'Pet Mode' },
-    { key: 'supportsAudioDolbyAtmos', label: 'Dolby Atmos' }
+    { key: 'supportsAudioDolbyAtmos', label: 'Dolby Atmos' },
+    { key: 'hasSubwoofers', label: 'Has Subwoofers' }
 ] as const;
 
 const normalizeListValues = (rawChoices: unknown): string[] => {
@@ -183,10 +188,10 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
         { title: 'Drive Axle', key: 'driveAxle', choices: normalizeListValues(opts.driveAxle) },
         { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeListValues(opts.vehicleType) },
         { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeListValues(opts.batteryChemistry) },
-        { title: 'Charge Port', key: 'chargingPortTypes', choices: normalizeListValues(opts.chargingPortTypes) },
+        { title: 'Charge Ports', key: 'chargingPortTypes', choices: normalizeListValues(opts.chargingPortTypes) },
         { title: 'Assembly Country', key: 'countryOfAssembly', choices: normalizeListValues(opts.countryOfAssembly) },
         { title: 'OS', key: 'infotainmentOperatingSystem', choices: normalizeListValues(opts.infotainmentOperatingSystem) },
-        { title: 'Audio System', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
+        { title: 'Audio', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
     ];
 });
 
@@ -201,6 +206,8 @@ const activeChipsList = computed(() => {
             if (item) {
                 chips.push({ categoryKey: k, displayValue: `${item.label}: ${val ? 'Yes' : 'No'}` });
             }
+        } else if (k === 'minSpeakers' && typeof val === 'number' && val > 0) {
+            chips.push({ categoryKey: k, displayValue: `Min Speakers: ${val}` });
         }
     });
     return chips;
@@ -251,6 +258,10 @@ onBeforeUnmount(() => {
 const resetAllFilters = () => {
     stringFilterGroups.value.forEach(g => { selectedFilters.value[g.key] = []; });
     booleanFilters.forEach(f => { selectedFilters.value[f.key] = null; });
+
+    selectedFilters.value.minSpeakers = null;
+    selectedFilters.value.hasSubwoofers = null;
+
     if (props.bounds) {
         yearMin.value = props.bounds.modelYear.min;
         rangeMin.value = props.bounds.epaCombinedRangeMiles.min;
@@ -264,8 +275,12 @@ const resetAllFilters = () => {
 const removeChip = (chip: { categoryKey: string; displayValue: string; }) => {
     const key = chip.categoryKey as keyof typeof selectedFilters.value;
     const current = selectedFilters.value[key];
+
     if (Array.isArray(current)) {
-        selectedFilters.value[key] = current.filter(item => item !== chip.displayValue.replace(/:\s(Yes|No)$/, '')) as any;
+        const cleanValue = chip.displayValue.split(':')[0]?.trim() || chip.displayValue;
+        (selectedFilters.value[key] as string[]) = current.filter(item => item !== cleanValue && item !== chip.displayValue);
+    } else if (key === 'minSpeakers') {
+        selectedFilters.value.minSpeakers = null;
     } else {
         selectedFilters.value[key] = null as any;
     }
@@ -344,10 +359,33 @@ watch(speedMin, () => { syncAndEmit(); });
                                 d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
                         </svg>
                         <input type="text" class="popover-search-input"
-                            :placeholder="`Filter ${group.title === 'OS' ? 'OS' : group.title.toLowerCase()}...`"
+                            :placeholder="`Filter ${group.title === 'OS' ? 'OS' : group.title.toLowerCase() === 'audio' ? 'brands' : group.title.toLowerCase()}...`"
                             v-model="popoverSearchQuery" autofocus />
                         <button v-if="popoverSearchQuery.length > 0" type="button" class="popover-search-clear-btn"
                             @click="popoverSearchQuery = ''">&times;</button>
+                    </div>
+
+                    <!-- Audio Specific Toggles -->
+                    <div v-if="group.key === 'audioBrand'" class="audio-quick-toggles">
+                        <div class="audio-toggle-group">
+                            <span class="audio-toggle-label">Subwoofers</span>
+                            <div class="segmented-control">
+                                <button :class="{ active: selectedFilters.hasSubwoofers === null }"
+                                    @click="selectedFilters.hasSubwoofers = null" type="button">Any</button>
+                                <button :class="{ active: selectedFilters.hasSubwoofers === true }"
+                                    @click="selectedFilters.hasSubwoofers = true" type="button">Yes</button>
+                                <button :class="{ active: selectedFilters.hasSubwoofers === false }"
+                                    @click="selectedFilters.hasSubwoofers = false" type="button">No</button>
+                            </div>
+                        </div>
+
+                        <div class="audio-range-group">
+                            <span class="range-meta-label">Min Speakers: <span class="slider-value-pill">{{
+                                selectedFilters.minSpeakers !== null && selectedFilters.minSpeakers > 0 ?
+                                    selectedFilters.minSpeakers : 'Any' }}</span></span>
+                            <input type="range" min="0" max="30" step="1" :value="selectedFilters.minSpeakers ?? 0"
+                                @input="selectedFilters.minSpeakers = Number(($event.target as HTMLInputElement).value) > 0 ? Number(($event.target as HTMLInputElement).value) : null" />
+                        </div>
                     </div>
 
                     <div class="popover-choices-list"
@@ -668,14 +706,14 @@ html.dark .dropdown-trigger-btn.has-active-selections {
     border: 1px solid rgba(216, 225, 234, 0.9);
     box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.12);
     border-radius: 14px;
-    padding: 8px;
+    padding: 10px;
     z-index: 120;
-    max-height: 260px;
+    max-height: 280px;
     overflow-y: auto;
-    min-width: 230px;
+    min-width: 260px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 html.dark .dropdown-popover-box {
@@ -692,7 +730,7 @@ html.dark .dropdown-popover-box {
     padding: 8px 12px;
     background: rgba(246, 248, 251, 0.95);
     border: 1px solid rgba(216, 225, 234, 0.85);
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     border-radius: 10px;
     z-index: 5;
 }
@@ -948,7 +986,6 @@ html.dark .popover-checkbox-item.charge-port-card:hover {
     height: 100%;
 }
 
-/* Force the SVG to a strict 40px height and let the width auto-scale */
 .charge-port-glyph {
     height: 40px !important;
     width: auto !important;
@@ -968,7 +1005,6 @@ html.dark .popover-checkbox-item.charge-port-card:hover {
     align-items: center;
 }
 
-/* This is no longer scoped because it is teleported to the body */
 :global(.global-custom-tooltip) {
     position: fixed;
     z-index: 99999;
@@ -981,7 +1017,93 @@ html.dark .popover-checkbox-item.charge-port-card:hover {
     white-space: nowrap;
     pointer-events: none;
     transform: translateX(-50%);
-    /* Centers it over the cursor */
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.audio-quick-toggles {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(241, 245, 249, 0.5);
+    border-radius: 10px;
+}
+
+html.dark .audio-quick-toggles {
+    background: rgba(15, 23, 42, 0.4);
+    border-bottom-color: rgba(51, 65, 85, 0.6);
+}
+
+.audio-toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.audio-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.segmented-control {
+    display: flex;
+    background: rgba(226, 232, 240, 0.8);
+    border-radius: 8px;
+    padding: 3px;
+    width: 100%;
+}
+
+html.dark .segmented-control {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.segmented-control button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.segmented-control button.active {
+    background: #ffffff;
+    color: var(--accent-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html.dark .segmented-control button.active {
+    background: #38bdf8;
+    color: #0f172a;
+}
+
+.audio-range-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.audio-range-group input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    outline: none;
+    background: rgba(203, 213, 225, 0.8);
+}
+
+html.dark .audio-range-group input[type="range"] {
+    background: rgba(51, 65, 85, 0.8);
 }
 </style>
