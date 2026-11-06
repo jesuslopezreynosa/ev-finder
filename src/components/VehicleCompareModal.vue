@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Vehicle } from '../VehicleGrid.vue';
+import type { Vehicle } from './VehicleGrid.vue';
 
 interface ComparisonCategory {
     id: string;

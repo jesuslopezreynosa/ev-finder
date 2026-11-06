@@ -4,9 +4,9 @@ import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
-import VehicleDetailPane from './components/VehicleDetailPane.vue';
-import VehicleCompareModal from './components/VehicleCompareModal.vue';
-import DrivetrainGlyph from './components/DrivetrainGlyph.vue';
+import GlyphHandler from './GlyphHandler.vue';
+import VehicleCompareModal from './VehicleCompareModal.vue';
+import VehicleDetailPane from './VehicleDetailPane.vue';
 
 countries.registerLocale(enLocale);
 
@@ -491,8 +491,7 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <p class="trim-drivetrain-line">
                                     <strong>{{ vehicle.trim }}</strong>
                                     <span class="pill drivetrain-pill">
-                                        <DrivetrainGlyph :drive-axle="vehicle.driveAxle" class="pill-mini-svg"
-                                            :size="13" />
+                                        <GlyphHandler :type="vehicle.driveAxle" class="pill-mini-svg" :size="13" />
                                         {{ vehicle.driveAxle }}
                                     </span>
                                     <span :data-tooltip="vehicle.batteryChemistry || undefined" class="tooltip-wrapper">
@@ -523,9 +522,6 @@ const evaluateRowDifference = (label: string): boolean => {
                                                 <img :src="getChargingPortIconUrl(port)" :alt="port"
                                                     class="charger-inline-icon" />
                                             </span>
-                                            <span
-                                                v-if="pIdx < getChargingPortsArray(vehicle.chargingPortTypes).length - 1"
-                                                class="charger-separator">&amp;</span>
                                         </span>
                                     </span>
                                 </p>
@@ -936,12 +932,6 @@ html.dark .specs-preview-summary {
 
 html.dark .charger-inline-icon {
     filter: invert(1) brightness(2);
-}
-
-.charger-separator {
-    font-size: 14px;
-    color: #94a3b8;
-    margin-left: 6px;
 }
 
 /* High-Contrast Tooltips */

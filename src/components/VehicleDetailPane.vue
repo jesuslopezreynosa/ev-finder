@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 
-import type { Vehicle } from '../VehicleGrid.vue';
-import DrivetrainGlyph from './DrivetrainGlyph.vue';
+import type { Vehicle } from './VehicleGrid.vue';
+import GlyphHandler from './GlyphHandler.vue';
 
 const props = defineProps<{
     activeVehicle: Vehicle;
@@ -70,7 +70,7 @@ const scrollTabs = (direction: number) => {
                 <div class="hero-meta-block">
                     <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
                     <span class="hero-subtitle-text">
-                        <DrivetrainGlyph :drive-axle="activeVehicle.driveAxle" class="pill-mini-svg" :size="13" />
+                        <GlyphHandler :type="activeVehicle.driveAxle" class="pill-mini-svg" :size="13" />
                         {{ activeVehicle.driveAxle }} &bull; {{ activeVehicle.vehicleType }}
                     </span>
                 </div>
@@ -87,7 +87,7 @@ const scrollTabs = (direction: number) => {
                                 class="hero-value-unit">kWh</span>
                         </span>
                         <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
-                            }})</span>
+                        }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
                         <span class="hero-value">

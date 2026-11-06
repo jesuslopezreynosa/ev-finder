@@ -3,9 +3,9 @@ import { ref } from 'vue';
 
 import EvData from '@/assets/ev-specs.json';
 import { useTheme } from '@/composables/useTheme';
-import VehicleGrid, { type Vehicle } from './VehicleGrid.vue';
-import Header from './Header.vue';
-import ArticleView from './ArticleView.vue';
+import VehicleGrid, { type Vehicle } from './components/VehicleGrid.vue';
+import Header from './components/Header.vue';
+import ArticleView from './components/ArticleView.vue';
 
 useTheme();
 
