@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount, reactive } from 'vue';
 
 import { useTheme } from '@/composables/useTheme';
 import GlyphHandler from './GlyphHandler.vue';
@@ -59,6 +59,14 @@ interface StringGroupConfig {
     choices: string[];
 }
 
+const BATTERY_CHEMISTRIES: Record<string, string> = {
+    'LFP': 'Lithium Iron Phosphate',
+    'NCM': 'Nickle Cobalt Manganese',
+    'NCA': 'Nickle Cobalt Aluminium',
+    'NCMA': 'Nickle Cobalt Manganese Aluminium',
+    'NRMC': 'Nickle-Rich Manganese Cobalt'
+}
+
 const SEARCHABLE_CATEGORIES: ReadonlySet<string> = new Set([
     'manufacturer',
     'infotainmentOperatingSystem',
@@ -76,6 +84,27 @@ const emitChange = defineEmits<{
 }>();
 
 const { isDark } = useTheme();
+
+const tooltip = reactive({
+    visible: false,
+    text: '',
+    x: 0,
+    y: 0
+});
+
+function showTooltip(event: MouseEvent, text: string | undefined) {
+    if (!text) return;
+    tooltip.text = text;
+    tooltip.visible = true;
+
+    // Position it slightly above the cursor
+    tooltip.x = event.clientX;
+    tooltip.y = event.clientY - 35;
+}
+
+function hideTooltip() {
+    tooltip.visible = false;
+}
 
 const activePopoverKey = ref<string | null>(null);
 const popoverSearchQuery = ref<string>('');
@@ -321,21 +350,32 @@ watch(speedMin, () => { syncAndEmit(); });
                             @click="popoverSearchQuery = ''">&times;</button>
                     </div>
 
-                    <div class="popover-choices-list">
+                    <div class="popover-choices-list"
+                        :class="{ 'is-charge-port-grid': group.key === 'chargingPortTypes' }">
                         <label
                             v-for="option in (SEARCHABLE_CATEGORIES.has(group.key) && popoverSearchQuery.trim() ? group.choices.filter(c => c.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim())) : group.choices)"
-                            :key="option" class="popover-checkbox-item">
+                            :key="option" class="popover-checkbox-item"
+                            :class="{ 'charge-port-card': group.key === 'chargingPortTypes' }"
+                            @mouseenter="group.key === 'batteryChemistry' && showTooltip($event, BATTERY_CHEMISTRIES[option])"
+                            @mouseleave="group.key === 'batteryChemistry' && hideTooltip()">
+
                             <input type="checkbox" :value="option" v-model="selectedFilters[group.key]"
                                 class="styled-checkbox" />
-                            <span class="checkbox-custom-label">{{ option }}</span>
-                            <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
-                                :title="`${option} layout`">
-                                <GlyphHandler :type="option" :size="15" />
-                            </span>
-                            <span v-else-if="group.key === 'chargingPortTypes'" class="dropdown-drivetrain-glyph-slot"
-                                :title="`${option} port`">
-                                <GlyphHandler :type="option" :size="15" />
-                            </span>
+
+                            <template v-if="group.key === 'chargingPortTypes'">
+                                <div class="charge-port-content">
+                                    <GlyphHandler :type="option" :size="100" class="charge-port-glyph" />
+                                    <span class="checkbox-custom-label">{{ option }}</span>
+                                </div>
+                            </template>
+
+                            <template v-else>
+                                <span class="checkbox-custom-label">{{ option }}</span>
+                                <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
+                                    :title="`${option} layout`">
+                                    <GlyphHandler :type="option" :size="15" />
+                                </span>
+                            </template>
                         </label>
                     </div>
                 </div>
@@ -365,6 +405,14 @@ watch(speedMin, () => { syncAndEmit(); });
             </div>
         </div>
     </div>
+
+    <!-- For dropdown tooltips -->
+    <Teleport to="body">
+        <div v-if="tooltip.visible" :style="{ top: tooltip.y + 'px', left: tooltip.x + 'px' }"
+            class="global-custom-tooltip">
+            {{ tooltip.text }}
+        </div>
+    </Teleport>
 </template>
 
 <style scoped>
@@ -848,5 +896,92 @@ html.dark .feature-select-box {
     background: rgba(11, 19, 43, 0.9);
     border-color: rgba(56, 189, 248, 0.35);
     color: var(--text-primary);
+}
+
+.popover-choices-list.is-charge-port-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 8px;
+}
+
+.popover-checkbox-item.charge-port-card {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    text-align: center;
+    position: relative;
+    background: rgba(255, 255, 255, 0.5);
+    transition: all 0.2s ease;
+    height: 100px;
+    box-sizing: border-box;
+}
+
+html.dark .popover-checkbox-item.charge-port-card {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.popover-checkbox-item.charge-port-card:hover {
+    background: #eef2f6;
+}
+
+html.dark .popover-checkbox-item.charge-port-card:hover {
+    background: rgba(11, 19, 43, 0.8);
+}
+
+.charge-port-card .styled-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+}
+
+.charge-port-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+}
+
+/* Force the SVG to a strict 40px height and let the width auto-scale */
+.charge-port-glyph {
+    height: 40px !important;
+    width: auto !important;
+    max-width: 100% !important;
+}
+
+.tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+}
+
+.tooltip-trigger {
+    cursor: help;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* This is no longer scoped because it is teleported to the body */
+:global(.global-custom-tooltip) {
+    position: fixed;
+    z-index: 99999;
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+    /* Centers it over the cursor */
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 </style>

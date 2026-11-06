@@ -101,17 +101,6 @@ const props = defineProps<{
     vehicles: Vehicle[];
 }>();
 
-const iconModules = import.meta.glob('/src/assets/icons/*.svg', {
-    eager: true,
-    import: 'default'
-}) as Record<string, string>;
-
-const getChargingPortIconUrl = (portName: string): string => {
-    if (!portName) return '';
-    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    return iconModules[`/src/assets/icons/${filename}.svg`] || '';
-};
-
 const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     if (!alpha3Code) return '';
     const cleaned = String(alpha3Code).trim().toUpperCase();
@@ -490,9 +479,10 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                                 <p class="trim-drivetrain-line">
                                     <strong>{{ vehicle.trim }}</strong>
-                                    <span class="pill drivetrain-pill">
-                                        <GlyphHandler :type="vehicle.driveAxle" class="pill-mini-svg" :size="13" />
-                                        {{ vehicle.driveAxle }}
+                                    <span :data-tooltip="vehicle.driveAxle || undefined" class="tooltip-wrapper">
+                                        <span class="pill drivetrain-pill">
+                                            <GlyphHandler :type="vehicle.driveAxle" class="pill-mini-svg" :size="14" />
+                                        </span>
                                     </span>
                                     <span :data-tooltip="vehicle.batteryChemistry || undefined" class="tooltip-wrapper">
                                         <span class="pill battery-pill">
@@ -515,13 +505,34 @@ const evaluateRowDifference = (label: string): boolean => {
                                     <span class="summary-bullet">&bull;</span>
                                     <span>{{ vehicle.epaCombinedRangeMiles }} mi range</span>
                                     <span class="summary-bullet">&bull;</span>
-                                    <span class="inline-charger-container">
-                                        <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPortTypes)"
+                                    <!-- Charge Ports -->
+                                    <span class="feature-icon-container">
+                                        <span v-for="port in getChargingPortsArray(vehicle.chargingPortTypes)"
                                             :key="port" class="inline-charger-item">
                                             <span :data-tooltip="port" class="tooltip-wrapper tooltip-down">
-                                                <img :src="getChargingPortIconUrl(port)" :alt="port"
-                                                    class="charger-inline-icon" />
+                                                <GlyphHandler :type="port" :size="16" class="feature-icon" />
                                             </span>
+                                        </span>
+                                    </span>
+                                    <!-- Plug and Charge -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.supportsPlugAndChargeIso15118 && vehicle.supportsPlugAndChargeIso15118.toLowerCase() != 'no'">
+                                        <span data-tooltip="Plug and Charge" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PLUG-AND-CHARGE" :size="16" class="feature-icon" />
+                                        </span>
+                                    </span>
+                                    <!-- Pet Mode -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.hasPetMode && vehicle.hasPetMode.toLowerCase() != 'no'">
+                                        <span data-tooltip="Pet Mode" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PET-MODE" :size="16" class="feature-icon" />
+                                        </span>
+                                    </span>
+                                    <!-- Phone Key -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.supportsPhoneAsAKey && vehicle.supportsPhoneAsAKey.toLowerCase() != 'no'">
+                                        <span data-tooltip="Phone Key" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PHONE-KEY" :size="16" class="feature-icon" />
                                         </span>
                                     </span>
                                 </p>
@@ -916,22 +927,26 @@ html.dark .specs-preview-summary {
     color: #94a3b8;
 }
 
-.inline-charger-container {
+.feature-icon-container {
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
-.charger-inline-icon {
-    height: 28px;
-    width: auto;
+.feature-icon {
+    height: 16px;
+    width: 16px;
     display: inline-block;
     object-fit: contain;
     cursor: help;
+    color: #64748b;
+    /* Matches specs-preview-summary text */
+    transition: color 0.2s ease;
 }
 
-html.dark .charger-inline-icon {
-    filter: invert(1) brightness(2);
+html.dark .feature-icon {
+    color: #94a3b8;
+    /* Matches dark mode text */
 }
 
 /* High-Contrast Tooltips */

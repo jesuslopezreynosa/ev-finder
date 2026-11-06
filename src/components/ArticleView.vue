@@ -22,7 +22,7 @@ const hasError = ref<boolean>(false);
 const { isDark } = useTheme();
 
 const modules = import.meta.glob('/src/assets/articles/*.md', { query: '?raw' });
-const targetPath = computed<string>(() => `/src/assets/articles/${props.title}.md`);
+const targetPath = computed<string>(() => `/src/assets/articles/${ props.title }.md`);
 
 const baseUrl = import.meta.env.BASE_URL;
 

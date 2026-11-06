@@ -68,10 +68,9 @@ const scrollTabs = (direction: number) => {
         <div class="specs-expanded-drawer">
             <div class="hero-specs-dashboard">
                 <div class="hero-meta-block">
-                    <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
                     <span class="hero-subtitle-text">
-                        <GlyphHandler :type="activeVehicle.driveAxle" class="pill-mini-svg" :size="13" />
-                        {{ activeVehicle.driveAxle }} &bull; {{ activeVehicle.vehicleType }}
+                        {{ activeVehicle.trim }} &bull; {{ activeVehicle.driveAxle }} &bull; {{
+                        activeVehicle.vehicleType }}
                     </span>
                 </div>
                 <div class="hero-metrics-row">
@@ -86,7 +85,7 @@ const scrollTabs = (direction: number) => {
                             {{ activeVehicle.netBatteryCapacityKilowattHours || '—' }}<span
                                 class="hero-value-unit">kWh</span>
                         </span>
-                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
+                        <span class="hero-label">Net Battery Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
                         }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
