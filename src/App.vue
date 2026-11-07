@@ -3,9 +3,9 @@ import { ref } from 'vue';
 
 import EvData from '@/assets/ev-specs.json';
 import { useTheme } from '@/composables/useTheme';
-import VehicleGrid, { type Vehicle } from './VehicleGrid.vue';
-import Header from './Header.vue';
-import ArticleView from './ArticleView.vue';
+import VehicleGrid, { type Vehicle } from './components/VehicleGrid.vue';
+import Header from './components/Header.vue';
+import ArticleView from './components/ArticleView.vue';
 
 useTheme();
 
@@ -19,7 +19,7 @@ const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
     return (
         String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
         String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
-        a.modelYear - b.modelYear
+        Number(a.modelYear) - Number(b.modelYear)
     );
 });
 </script>

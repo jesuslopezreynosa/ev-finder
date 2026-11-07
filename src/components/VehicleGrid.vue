@@ -4,9 +4,10 @@ import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
 
 import GridFilter, { type FilterState } from './GridFilter.vue';
-import VehicleDetailPane from './components/VehicleDetailPane.vue';
-import VehicleCompareModal from './components/VehicleCompareModal.vue';
-import DrivetrainGlyph from './components/DrivetrainGlyph.vue';
+import GlyphHandler from './GlyphHandler.vue';
+import VehicleCompareModal from './VehicleCompareModal.vue';
+import VehicleDetailPane from './VehicleDetailPane.vue';
+import { TECHNICAL_CATEGORIES, CATEGORY_MAPPINGS, type CategoryId } from '@/constants/vehicleSpecs';
 
 countries.registerLocale(enLocale);
 
@@ -94,23 +95,12 @@ export interface Vehicle {
     torqueFootPounds: number | null;
     zeroToSixtyTimeSeconds: number | null;
     turningRadiusFeet: number | null;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 const props = defineProps<{
     vehicles: Vehicle[];
 }>();
-
-const iconModules = import.meta.glob('/src/assets/icons/*.svg', {
-    eager: true,
-    import: 'default'
-}) as Record<string, string>;
-
-const getChargingPortIconUrl = (portName: string): string => {
-    if (!portName) return '';
-    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    return iconModules[`/src/assets/icons/${filename}.svg`] || '';
-};
 
 const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     if (!alpha3Code) return '';
@@ -123,7 +113,7 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
-const getChargingPortsArray = (portValue: any): string[] => {
+const getChargingPortsArray = (portValue: unknown): string[] => {
     if (!portValue) return [];
     if (Array.isArray(portValue)) {
         return portValue.flatMap(p => String(p).split(',').map(item => item.trim())).filter(Boolean);
@@ -189,28 +179,10 @@ const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
 const detailsAnchorRef = ref<HTMLElement | null>(null);
 
-const technicalCategories = [
-    { id: 'powertrainPerformance', title: 'Powertrain & Performance' },
-    { id: 'energyCharging', title: 'Energy & Charging' },
-    { id: 'dimensions', title: 'Dimensions' },
-    { id: 'cabinConvenience', title: 'Cabin & Convenience' },
-    { id: 'infotainmentConnectivity', title: 'Infotainment & Connectivity' },
-    { id: 'camerasSensors', title: 'Cameras & Sensors' },
-    { id: 'warranties', title: 'Warranties' }
-] as const;
+const technicalCategories = TECHNICAL_CATEGORIES;
+const activeTabId = ref<string>(technicalCategories[0]!.id);
 
-type CategoryId = (typeof technicalCategories)[number]['id'];
-const activeTabId = ref<string>(technicalCategories[0].id);
-
-const categoryMappings: Record<CategoryId, string[]> = {
-    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
-    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
-    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
-    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
-    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
-    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
-    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
-};
+const categoryMappings = CATEGORY_MAPPINGS;
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
@@ -228,7 +200,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 label = label.replace(regex, acronym.toUpperCase());
             });
 
-            let displayValue = value;
+            let displayValue: unknown = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
             } else if (Array.isArray(value)) {
@@ -288,14 +260,38 @@ const filteredVehicles = computed(() => {
             'supportsPhoneAsAKey', 'hasPoweredLiftgate', 'hasOnePedalDrive', 'hasAdaptiveCruiseControl',
             'hasGlassRoof', 'supportsAppleCarPlayAndAndroidAuto', 'hasPoweredSeats', 'hasVentilatedSeats',
             'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasHeatPump', 'hasPoweredSideMirrors',
-            'hasPetMode', 'supportsAudioDolbyAtmos'
+            'hasPetMode', 'supportsAudioDolbyAtmos', 'hasSubwoofers'
         ] as const;
 
         const matchesBooleans = booleanCategories.every(key => {
             const filterVal = filters[key];
             if (filterVal === null || filterVal === undefined) return true;
+
+            // Special handling for hasSubwoofers since it maps to audioSubwooferCount in the vehicle data
+            if (key === 'hasSubwoofers') {
+                const count = Number(vehicle.audioSubwooferCount);
+                const hasSubs = !isNaN(count) && count > 0;
+                return hasSubs === filterVal;
+            }
+
             return evaluateFeaturePresence(key, vehicle[key]) === filterVal;
         });
+
+        const matchesSpeakers = (() => {
+            const minRequired = Number(filters.minSpeakers);
+            if (isNaN(minRequired) || minRequired <= 0) return true;
+
+            const speakerVal = vehicle.audioSpeakerCount;
+            if (speakerVal === null || speakerVal === undefined) return false;
+
+            const parsedCount = typeof speakerVal === 'number'
+                ? speakerVal
+                : parseInt(String(speakerVal).replace(/[^0-9]/g, ''), 10);
+
+            if (isNaN(parsedCount)) return false;
+
+            return parsedCount >= minRequired;
+        })();
 
         const vehicleYear = Number(vehicle.modelYear);
         const vehicleRange = Number(vehicle.epaCombinedRangeMiles);
@@ -308,6 +304,7 @@ const filteredVehicles = computed(() => {
         return (
             matchesStrings &&
             matchesBooleans &&
+            matchesSpeakers &&
             (isNaN(filterYearMin) || filterYearMin <= 0 || (!isNaN(vehicleYear) && vehicleYear >= filterYearMin)) &&
             (isNaN(filterRangeMin) || filterRangeMin <= 0 || (!isNaN(vehicleRange) && vehicleRange >= filterRangeMin)) &&
             (isNaN(filterSpeedMin) || filterSpeedMin <= 0 || (!isNaN(vehicleSpeed) && vehicleSpeed >= filterSpeedMin))
@@ -315,17 +312,17 @@ const filteredVehicles = computed(() => {
     });
 });
 
-const getVehicleKey = (v: Vehicle): string => {
-    if (v.id) return String(v.id);
-    return [v.modelYear, v.manufacturer, v.model, v.trim, v.driveAxle].map(p => String(p ?? '').trim()).filter(Boolean).join('-');
+const getVehicleKey = (v: Vehicle, index?: number): string => {
+    const base = v.id ? String(v.id) : [v.modelYear, v.manufacturer, v.model, v.trim, v.market, v.driveAxle, v.epaCombinedRangeMiles].map(p => String(p ?? '').trim()).filter(Boolean).join('-');
+    return index !== undefined ? `${base}-${index}` : base;
 };
 
 const updateFilters = (newFilters: FilterState) => {
     currentFilters.value = { ...newFilters };
 };
 
-const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent) => {
-    const key = getVehicleKey(vehicle);
+const toggleSelectVehicle = (vehicle: Vehicle, event: MouseEvent, index: number) => {
+    const key = getVehicleKey(vehicle, index);
     selectedVehicleKey.value = selectedVehicleKey.value === key ? null : key;
     if (selectedVehicleKey.value !== null) {
         setTimeout(() => {
@@ -348,7 +345,7 @@ const closeSelectedVehicle = () => {
 
 const activeVehicle = computed(() => {
     if (!selectedVehicleKey.value) return null;
-    return props.vehicles.find(v => getVehicleKey(v) === selectedVehicleKey.value) || null;
+    return props.vehicles.find((v, idx) => getVehicleKey(v, idx) === selectedVehicleKey.value) || null;
 });
 
 const activeVehicleSpecs = computed(() => {
@@ -360,12 +357,12 @@ const comparisonRegistry = ref(new Map<string, Vehicle>());
 const selectedForComparison = computed<Vehicle[]>(() => Array.from(comparisonRegistry.value.values()));
 const isCompareModalOpen = ref<boolean>(false);
 
-const isVehicleSelectedForCompare = (vehicle: Vehicle): boolean => {
-    return comparisonRegistry.value.has(getVehicleKey(vehicle));
+const isVehicleSelectedForCompare = (vehicle: Vehicle, index: number): boolean => {
+    return comparisonRegistry.value.has(getVehicleKey(vehicle, index));
 };
 
-const toggleCompareVehicle = (vehicle: Vehicle): void => {
-    const targetKey = getVehicleKey(vehicle);
+const toggleCompareVehicle = (vehicle: Vehicle, index: number): void => {
+    const targetKey = getVehicleKey(vehicle, index);
     if (comparisonRegistry.value.has(targetKey)) {
         comparisonRegistry.value.delete(targetKey);
     } else if (comparisonRegistry.value.size < 4) {
@@ -386,10 +383,10 @@ const closeCompareModal = (): void => {
     isCompareModalOpen.value = false;
 };
 
-const getSpecValueByLabel = (vehicle: Vehicle, label: string) => {
+const getSpecValueByLabel = (vehicle: Vehicle, label: string): string => {
     const specs = formatDisplaySpecs(vehicle);
     const found = specs.find(s => s.label === label);
-    return found ? found.val : '—';
+    return found ? String(found.val) : '—';
 };
 
 const topCompareBarRef = ref<HTMLElement | null>(null);
@@ -475,14 +472,15 @@ const evaluateRowDifference = (label: string): boolean => {
         <div class="split-view-layout" :class="{ 'has-expanded-card': selectedVehicleKey !== null }">
             <div class="vehicles-list-column">
                 <div class="grid-container">
-                    <template v-for="vehicle in filteredVehicles" :key="getVehicleKey(vehicle)">
-                        <div class="grid-item" :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle) }"
-                            @click="toggleSelectVehicle(vehicle, $event)">
+                    <template v-for="(vehicle, index) in filteredVehicles" :key="getVehicleKey(vehicle, index)">
+                        <div class="grid-item"
+                            :class="{ 'is-selected': selectedVehicleKey === getVehicleKey(vehicle, index) }"
+                            @click="toggleSelectVehicle(vehicle, $event, index)">
                             <div class="card-header-actions" @click.stop>
                                 <label class="compare-checkbox-label">
-                                    <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle)"
-                                        :disabled="!isVehicleSelectedForCompare(vehicle) && selectedForComparison.length >= 4"
-                                        @change="toggleCompareVehicle(vehicle)" class="styled-checkbox-mini" />
+                                    <input type="checkbox" :checked="isVehicleSelectedForCompare(vehicle, index)"
+                                        :disabled="!isVehicleSelectedForCompare(vehicle, index) && selectedForComparison.length >= 4"
+                                        @change="toggleCompareVehicle(vehicle, index)" class="styled-checkbox-mini" />
                                     <span>Compare</span>
                                 </label>
                             </div>
@@ -490,12 +488,14 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                                 <p class="trim-drivetrain-line">
                                     <strong>{{ vehicle.trim }}</strong>
-                                    <span class="pill drivetrain-pill">
-                                        <DrivetrainGlyph :drive-axle="vehicle.driveAxle" class="pill-mini-svg"
-                                            :size="13" />
-                                        {{ vehicle.driveAxle }}
+                                    <span :data-tooltip="String(vehicle.driveAxle || '')" class="tooltip-wrapper">
+                                        <span class="pill drivetrain-pill">
+                                            <GlyphHandler :type="String(vehicle.driveAxle ?? '')" class="pill-mini-svg"
+                                                :size="14" />
+                                        </span>
                                     </span>
-                                    <span :data-tooltip="vehicle.batteryChemistry || undefined" class="tooltip-wrapper">
+                                    <span :data-tooltip="String(vehicle.batteryChemistry || '')"
+                                        class="tooltip-wrapper">
                                         <span class="pill battery-pill">
                                             <svg viewBox="0 0 24 24" class="pill-mini-svg" aria-hidden="true">
                                                 <path
@@ -516,23 +516,41 @@ const evaluateRowDifference = (label: string): boolean => {
                                     <span class="summary-bullet">&bull;</span>
                                     <span>{{ vehicle.epaCombinedRangeMiles }} mi range</span>
                                     <span class="summary-bullet">&bull;</span>
-                                    <span class="inline-charger-container">
-                                        <span v-for="(port, pIdx) in getChargingPortsArray(vehicle.chargingPortTypes)"
+                                    <!-- Charge Ports -->
+                                    <span class="feature-icon-container">
+                                        <span v-for="port in getChargingPortsArray(vehicle.chargingPortTypes)"
                                             :key="port" class="inline-charger-item">
                                             <span :data-tooltip="port" class="tooltip-wrapper tooltip-down">
-                                                <img :src="getChargingPortIconUrl(port)" :alt="port"
-                                                    class="charger-inline-icon" />
+                                                <GlyphHandler :type="port" :size="16" class="feature-icon" />
                                             </span>
-                                            <span
-                                                v-if="pIdx < getChargingPortsArray(vehicle.chargingPortTypes).length - 1"
-                                                class="charger-separator">&amp;</span>
+                                        </span>
+                                    </span>
+                                    <!-- Plug and Charge -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.supportsPlugAndChargeIso15118 && String(vehicle.supportsPlugAndChargeIso15118).toLowerCase() != 'no'">
+                                        <span data-tooltip="Plug and Charge" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PLUG-AND-CHARGE" :size="16" class="feature-icon" />
+                                        </span>
+                                    </span>
+                                    <!-- Pet Mode -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.hasPetMode && String(vehicle.hasPetMode).toLowerCase() != 'no'">
+                                        <span data-tooltip="Pet Mode" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PET-MODE" :size="16" class="feature-icon" />
+                                        </span>
+                                    </span>
+                                    <!-- Phone Key -->
+                                    <span class="feature-icon-container"
+                                        v-if="vehicle.supportsPhoneAsAKey && String(vehicle.supportsPhoneAsAKey).toLowerCase() != 'no'">
+                                        <span data-tooltip="Phone Key" class="tooltip-wrapper tooltip-down">
+                                            <GlyphHandler type="PHONE-KEY" :size="16" class="feature-icon" />
                                         </span>
                                     </span>
                                 </p>
                             </div>
                         </div>
 
-                        <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle) && activeVehicle"
+                        <VehicleDetailPane v-if="selectedVehicleKey === getVehicleKey(vehicle, index) && activeVehicle"
                             class="mobile-only-pane" :active-vehicle="activeVehicle" :active-tab-id="activeTabId"
                             :technical-categories="technicalCategories" :active-vehicle-specs="activeVehicleSpecs"
                             @close="closeSelectedVehicle" @select-tab="(id) => (activeTabId = id)" />
@@ -565,7 +583,7 @@ const evaluateRowDifference = (label: string): boolean => {
         <VehicleCompareModal :is-open="isCompareModalOpen" :selected-vehicles="selectedForComparison"
             :categories="comparisonCategories" v-model:highlight-differences="highlightDifferences"
             :get-spec-value-by-label="getSpecValueByLabel" :evaluate-row-difference="evaluateRowDifference"
-            @close="closeCompareModal" @toggle-compare="toggleCompareVehicle" />
+            @close="closeCompareModal" @toggle-compare="(v) => toggleCompareVehicle(v, 0)" />
     </div>
 </template>
 
@@ -920,28 +938,26 @@ html.dark .specs-preview-summary {
     color: #94a3b8;
 }
 
-.inline-charger-container {
+.feature-icon-container {
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
-.charger-inline-icon {
-    height: 28px;
-    width: auto;
+.feature-icon {
+    height: 16px;
+    width: 16px;
     display: inline-block;
     object-fit: contain;
     cursor: help;
+    color: #64748b;
+    /* Matches specs-preview-summary text */
+    transition: color 0.2s ease;
 }
 
-html.dark .charger-inline-icon {
-    filter: invert(1) brightness(2);
-}
-
-.charger-separator {
-    font-size: 14px;
+html.dark .feature-icon {
     color: #94a3b8;
-    margin-left: 6px;
+    /* Matches dark mode text */
 }
 
 /* High-Contrast Tooltips */

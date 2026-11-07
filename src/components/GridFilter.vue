@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, toRaw, watch, onMounted, onBeforeUnmount, reactive } from 'vue';
 
 import { useTheme } from '@/composables/useTheme';
-import DrivetrainGlyph from './components/DrivetrainGlyph.vue';
+import GlyphHandler from './GlyphHandler.vue';
 
 export interface FilterState {
     manufacturer: string[];
@@ -34,6 +34,8 @@ export interface FilterState {
     hasBuiltInDashcam: boolean | null;
     hasPetMode: boolean | null;
     supportsAudioDolbyAtmos: boolean | null;
+    hasSubwoofers: boolean | null;
+    minSpeakers: number | null;
 }
 
 interface RangeBounds { min: number; max: number; }
@@ -59,6 +61,14 @@ interface StringGroupConfig {
     choices: string[];
 }
 
+const BATTERY_CHEMISTRIES: Record<string, string> = {
+    'LFP': 'Lithium Iron Phosphate',
+    'NCM': 'Nickle Cobalt Manganese',
+    'NCA': 'Nickle Cobalt Aluminium',
+    'NCMA': 'Nickle Cobalt Manganese Aluminium',
+    'NRMC': 'Nickle-Rich Manganese Cobalt'
+}
+
 const SEARCHABLE_CATEGORIES: ReadonlySet<string> = new Set([
     'manufacturer',
     'infotainmentOperatingSystem',
@@ -75,18 +85,28 @@ const emitChange = defineEmits<{
     (e: 'filter-change', activeFilters: FilterState): void;
 }>();
 
-const iconModules = import.meta.glob('/src/assets/icons/*.svg', {
-    eager: true,
-    import: 'default'
-}) as Record<string, string>;
-
-const getChargingPortIconUrl = (portName: string): string => {
-    if (!portName) return '';
-    const filename = portName.toLowerCase().replace(/[\s-]/g, '');
-    return iconModules[`/src/assets/icons/${filename}.svg`] || '';
-};
-
 const { isDark } = useTheme();
+
+const tooltip = reactive({
+    visible: false,
+    text: '',
+    x: 0,
+    y: 0
+});
+
+function showTooltip(event: MouseEvent, text: string | undefined) {
+    if (!text) return;
+    tooltip.text = text;
+    tooltip.visible = true;
+
+    // Position it slightly above the cursor
+    tooltip.x = event.clientX;
+    tooltip.y = event.clientY - 35;
+}
+
+function hideTooltip() {
+    tooltip.visible = false;
+}
 
 const activePopoverKey = ref<string | null>(null);
 const popoverSearchQuery = ref<string>('');
@@ -121,7 +141,9 @@ const selectedFilters = ref({
     hasPoweredSideMirrors: null as boolean | null,
     hasBuiltInDashcam: null as boolean | null,
     hasPetMode: null as boolean | null,
-    supportsAudioDolbyAtmos: null as boolean | null
+    supportsAudioDolbyAtmos: null as boolean | null,
+    hasSubwoofers: null as boolean | null,
+    minSpeakers: null as number | null
 });
 
 const booleanFilters = [
@@ -142,7 +164,8 @@ const booleanFilters = [
     { key: 'hasPoweredSideMirrors', label: 'Powered Side Mirrors' },
     { key: 'hasBuiltInDashcam', label: 'Built-in Dashcam' },
     { key: 'hasPetMode', label: 'Pet Mode' },
-    { key: 'supportsAudioDolbyAtmos', label: 'Dolby Atmos' }
+    { key: 'supportsAudioDolbyAtmos', label: 'Dolby Atmos' },
+    { key: 'hasSubwoofers', label: 'Has Subwoofers' }
 ] as const;
 
 const normalizeListValues = (rawChoices: unknown): string[] => {
@@ -165,10 +188,10 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
         { title: 'Drive Axle', key: 'driveAxle', choices: normalizeListValues(opts.driveAxle) },
         { title: 'Vehicle Type', key: 'vehicleType', choices: normalizeListValues(opts.vehicleType) },
         { title: 'Battery Chemistry', key: 'batteryChemistry', choices: normalizeListValues(opts.batteryChemistry) },
-        { title: 'Charge Port', key: 'chargingPortTypes', choices: normalizeListValues(opts.chargingPortTypes) },
+        { title: 'Charge Ports', key: 'chargingPortTypes', choices: normalizeListValues(opts.chargingPortTypes) },
         { title: 'Assembly Country', key: 'countryOfAssembly', choices: normalizeListValues(opts.countryOfAssembly) },
         { title: 'OS', key: 'infotainmentOperatingSystem', choices: normalizeListValues(opts.infotainmentOperatingSystem) },
-        { title: 'Audio System', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
+        { title: 'Audio', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
     ];
 });
 
@@ -183,6 +206,8 @@ const activeChipsList = computed(() => {
             if (item) {
                 chips.push({ categoryKey: k, displayValue: `${item.label}: ${val ? 'Yes' : 'No'}` });
             }
+        } else if (k === 'minSpeakers' && typeof val === 'number' && val > 0) {
+            chips.push({ categoryKey: k, displayValue: `Min Speakers: ${val}` });
         }
     });
     return chips;
@@ -233,6 +258,10 @@ onBeforeUnmount(() => {
 const resetAllFilters = () => {
     stringFilterGroups.value.forEach(g => { selectedFilters.value[g.key] = []; });
     booleanFilters.forEach(f => { selectedFilters.value[f.key] = null; });
+
+    selectedFilters.value.minSpeakers = null;
+    selectedFilters.value.hasSubwoofers = null;
+
     if (props.bounds) {
         yearMin.value = props.bounds.modelYear.min;
         rangeMin.value = props.bounds.epaCombinedRangeMiles.min;
@@ -246,8 +275,12 @@ const resetAllFilters = () => {
 const removeChip = (chip: { categoryKey: string; displayValue: string; }) => {
     const key = chip.categoryKey as keyof typeof selectedFilters.value;
     const current = selectedFilters.value[key];
+
     if (Array.isArray(current)) {
-        selectedFilters.value[key] = current.filter(item => item !== chip.displayValue.replace(/:\s(Yes|No)$/, '')) as any;
+        const cleanValue = chip.displayValue.split(':')[0]?.trim() || chip.displayValue;
+        (selectedFilters.value[key] as string[]) = current.filter(item => item !== cleanValue && item !== chip.displayValue);
+    } else if (key === 'minSpeakers') {
+        selectedFilters.value.minSpeakers = null;
     } else {
         selectedFilters.value[key] = null as any;
     }
@@ -326,28 +359,61 @@ watch(speedMin, () => { syncAndEmit(); });
                                 d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
                         </svg>
                         <input type="text" class="popover-search-input"
-                            :placeholder="`Filter ${group.title === 'OS' ? 'OS' : group.title.toLowerCase()}...`"
+                            :placeholder="`Filter ${group.title === 'OS' ? 'OS' : group.title.toLowerCase() === 'audio' ? 'brands' : group.title.toLowerCase()}...`"
                             v-model="popoverSearchQuery" autofocus />
                         <button v-if="popoverSearchQuery.length > 0" type="button" class="popover-search-clear-btn"
                             @click="popoverSearchQuery = ''">&times;</button>
                     </div>
 
-                    <div class="popover-choices-list">
+                    <!-- Audio Specific Toggles -->
+                    <div v-if="group.key === 'audioBrand'" class="audio-quick-toggles">
+                        <div class="audio-toggle-group">
+                            <span class="audio-toggle-label">Subwoofers</span>
+                            <div class="segmented-control">
+                                <button :class="{ active: selectedFilters.hasSubwoofers === null }"
+                                    @click="selectedFilters.hasSubwoofers = null" type="button">Any</button>
+                                <button :class="{ active: selectedFilters.hasSubwoofers === true }"
+                                    @click="selectedFilters.hasSubwoofers = true" type="button">Yes</button>
+                                <button :class="{ active: selectedFilters.hasSubwoofers === false }"
+                                    @click="selectedFilters.hasSubwoofers = false" type="button">No</button>
+                            </div>
+                        </div>
+
+                        <div class="audio-range-group">
+                            <span class="range-meta-label">Min Speakers: <span class="slider-value-pill">{{
+                                selectedFilters.minSpeakers !== null && selectedFilters.minSpeakers > 0 ?
+                                    selectedFilters.minSpeakers : 'Any' }}</span></span>
+                            <input type="range" min="0" max="30" step="1" :value="selectedFilters.minSpeakers ?? 0"
+                                @input="selectedFilters.minSpeakers = Number(($event.target as HTMLInputElement).value) > 0 ? Number(($event.target as HTMLInputElement).value) : null" />
+                        </div>
+                    </div>
+
+                    <div class="popover-choices-list"
+                        :class="{ 'is-charge-port-grid': group.key === 'chargingPortTypes' }">
                         <label
                             v-for="option in (SEARCHABLE_CATEGORIES.has(group.key) && popoverSearchQuery.trim() ? group.choices.filter(c => c.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim())) : group.choices)"
-                            :key="option" class="popover-checkbox-item">
+                            :key="option" class="popover-checkbox-item"
+                            :class="{ 'charge-port-card': group.key === 'chargingPortTypes' }"
+                            @mouseenter="group.key === 'batteryChemistry' && showTooltip($event, BATTERY_CHEMISTRIES[option])"
+                            @mouseleave="group.key === 'batteryChemistry' && hideTooltip()">
+
                             <input type="checkbox" :value="option" v-model="selectedFilters[group.key]"
                                 class="styled-checkbox" />
-                            <span class="checkbox-custom-label">{{ option }}</span>
-                            <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
-                                :title="`${option} layout`">
-                                <DrivetrainGlyph :drive-axle="option" :size="15" />
-                            </span>
-                            <span v-else-if="group.key === 'chargingPortTypes'" class="dropdown-drivetrain-glyph-slot"
-                                :title="`${option} port`">
-                                <img :src="getChargingPortIconUrl(option)" :alt="option"
-                                    class="dropdown-charger-icon" />
-                            </span>
+
+                            <template v-if="group.key === 'chargingPortTypes'">
+                                <div class="charge-port-content">
+                                    <GlyphHandler :type="option" :size="100" class="charge-port-glyph" />
+                                    <span class="checkbox-custom-label">{{ option }}</span>
+                                </div>
+                            </template>
+
+                            <template v-else>
+                                <span class="checkbox-custom-label">{{ option }}</span>
+                                <span v-if="group.key === 'driveAxle'" class="dropdown-drivetrain-glyph-slot"
+                                    :title="`${option} layout`">
+                                    <GlyphHandler :type="option" :size="15" />
+                                </span>
+                            </template>
                         </label>
                     </div>
                 </div>
@@ -377,6 +443,14 @@ watch(speedMin, () => { syncAndEmit(); });
             </div>
         </div>
     </div>
+
+    <!-- For dropdown tooltips -->
+    <Teleport to="body">
+        <div v-if="tooltip.visible" :style="{ top: tooltip.y + 'px', left: tooltip.x + 'px' }"
+            class="global-custom-tooltip">
+            {{ tooltip.text }}
+        </div>
+    </Teleport>
 </template>
 
 <style scoped>
@@ -632,14 +706,14 @@ html.dark .dropdown-trigger-btn.has-active-selections {
     border: 1px solid rgba(216, 225, 234, 0.9);
     box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.12);
     border-radius: 14px;
-    padding: 8px;
+    padding: 10px;
     z-index: 120;
-    max-height: 260px;
+    max-height: 280px;
     overflow-y: auto;
-    min-width: 230px;
+    min-width: 260px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 html.dark .dropdown-popover-box {
@@ -656,7 +730,7 @@ html.dark .dropdown-popover-box {
     padding: 8px 12px;
     background: rgba(246, 248, 251, 0.95);
     border: 1px solid rgba(216, 225, 234, 0.85);
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     border-radius: 10px;
     z-index: 5;
 }
@@ -772,16 +846,6 @@ html.dark .dropdown-drivetrain-glyph-slot {
     color: #94a3b8;
 }
 
-.dropdown-charger-icon {
-    height: 20px;
-    width: auto;
-    object-fit: contain;
-}
-
-html.dark .dropdown-charger-icon {
-    filter: invert(1) brightness(2);
-}
-
 .features-row {
     position: relative;
     z-index: 15;
@@ -870,5 +934,176 @@ html.dark .feature-select-box {
     background: rgba(11, 19, 43, 0.9);
     border-color: rgba(56, 189, 248, 0.35);
     color: var(--text-primary);
+}
+
+.popover-choices-list.is-charge-port-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 8px;
+}
+
+.popover-checkbox-item.charge-port-card {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    text-align: center;
+    position: relative;
+    background: rgba(255, 255, 255, 0.5);
+    transition: all 0.2s ease;
+    height: 100px;
+    box-sizing: border-box;
+}
+
+html.dark .popover-checkbox-item.charge-port-card {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.popover-checkbox-item.charge-port-card:hover {
+    background: #eef2f6;
+}
+
+html.dark .popover-checkbox-item.charge-port-card:hover {
+    background: rgba(11, 19, 43, 0.8);
+}
+
+.charge-port-card .styled-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+}
+
+.charge-port-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+}
+
+.charge-port-glyph {
+    height: 40px !important;
+    width: auto !important;
+    max-width: 100% !important;
+}
+
+.tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+}
+
+.tooltip-trigger {
+    cursor: help;
+    display: inline-flex;
+    align-items: center;
+}
+
+:global(.global-custom-tooltip) {
+    position: fixed;
+    z-index: 99999;
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.audio-quick-toggles {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(203, 213, 225, 0.5);
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(241, 245, 249, 0.5);
+    border-radius: 10px;
+}
+
+html.dark .audio-quick-toggles {
+    background: rgba(15, 23, 42, 0.4);
+    border-bottom-color: rgba(51, 65, 85, 0.6);
+}
+
+.audio-toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.audio-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.segmented-control {
+    display: flex;
+    background: rgba(226, 232, 240, 0.8);
+    border-radius: 8px;
+    padding: 3px;
+    width: 100%;
+}
+
+html.dark .segmented-control {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.segmented-control button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.segmented-control button.active {
+    background: #ffffff;
+    color: var(--accent-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html.dark .segmented-control button.active {
+    background: #38bdf8;
+    color: #0f172a;
+}
+
+.audio-range-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.audio-range-group input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    outline: none;
+    background: rgba(203, 213, 225, 0.8);
+}
+
+html.dark .audio-range-group input[type="range"] {
+    background: rgba(51, 65, 85, 0.8);
 }
 </style>

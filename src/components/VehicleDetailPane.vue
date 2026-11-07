@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 
-import type { Vehicle } from '../VehicleGrid.vue';
-import DrivetrainGlyph from './DrivetrainGlyph.vue';
+import type { Vehicle } from './VehicleGrid.vue';
+import { TECHNICAL_CATEGORIES, CATEGORY_MAPPINGS, type CategoryId } from '@/constants/vehicleSpecs';
 
 const props = defineProps<{
     activeVehicle: Vehicle;
     activeTabId: string;
-    technicalCategories: readonly { id: string; title: string; }[];
-    activeVehicleSpecs: { label: string; val: any; originalKey: string; }[];
+    technicalCategories: typeof TECHNICAL_CATEGORIES;
+    activeVehicleSpecs: { label: string; val: unknown; originalKey: string; }[];
 }>();
 
 const emit = defineEmits<{
@@ -16,15 +16,7 @@ const emit = defineEmits<{
     (e: 'select-tab', tabId: string): void;
 }>();
 
-const categoryMappings: Record<string, string[]> = {
-    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
-    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
-    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
-    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
-    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
-    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
-    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
-};
+const categoryMappings = CATEGORY_MAPPINGS;
 
 const formatDisplaySpecsForVehicle = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
@@ -37,7 +29,7 @@ const availableCategories = computed(() => {
     if (!props.activeVehicle) return props.technicalCategories;
     const rawSpecs = formatDisplaySpecsForVehicle(props.activeVehicle);
     return props.technicalCategories.filter(cat => {
-        const targets = (categoryMappings[cat.id] || []).map(k => k.toLowerCase());
+        const targets = (categoryMappings[cat.id as CategoryId] || []).map(k => k.toLowerCase());
         const matched = rawSpecs.filter(spec => targets.includes(spec.originalKey.toLowerCase()));
         return matched.length > 0;
     });
@@ -68,10 +60,9 @@ const scrollTabs = (direction: number) => {
         <div class="specs-expanded-drawer">
             <div class="hero-specs-dashboard">
                 <div class="hero-meta-block">
-                    <span class="hero-subtitle-pill">{{ activeVehicle.trim }}</span>
                     <span class="hero-subtitle-text">
-                        <DrivetrainGlyph :drive-axle="activeVehicle.driveAxle" class="pill-mini-svg" :size="13" />
-                        {{ activeVehicle.driveAxle }} &bull; {{ activeVehicle.vehicleType }}
+                        {{ activeVehicle.trim }} &bull; {{ activeVehicle.driveAxle }} &bull; {{
+                            activeVehicle.vehicleType }}
                     </span>
                 </div>
                 <div class="hero-metrics-row">
@@ -86,7 +77,8 @@ const scrollTabs = (direction: number) => {
                             {{ activeVehicle.netBatteryCapacityKilowattHours || '—' }}<span
                                 class="hero-value-unit">kWh</span>
                         </span>
-                        <span class="hero-label">Net Capacity ({{ activeVehicle.batteryChemistry || 'Lithium-ion'
+                        <span class="hero-label">Net Battery Capacity ({{ activeVehicle.batteryChemistry ||
+                            'Lithium-ion'
                             }})</span>
                     </div>
                     <div class="hero-metric-card highlight-speed">
