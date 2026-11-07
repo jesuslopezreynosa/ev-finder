@@ -19,7 +19,7 @@ const SortedEvData: Vehicle[] = [...EvData].sort((a, b) => {
     return (
         String(a.manufacturer).trim().localeCompare(String(b.manufacturer).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
         String(a.model).trim().localeCompare(String(b.model).trim(), undefined, { numeric: true, sensitivity: 'base' }) ||
-        a.modelYear - b.modelYear
+        Number(a.modelYear) - Number(b.modelYear)
     );
 });
 </script>

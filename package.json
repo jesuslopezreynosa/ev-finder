@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "npx svgo --folder src/assets/icons --recursive && run-p type-check \"build-only {@}\" --",
+        "build": "run-p type-check \"build-only {@}\" --",
         "preview": "vite preview",
         "build-only": "vite build",
         "type-check": "vue-tsc --build",
@@ -25,7 +25,6 @@
         "@vue/tsconfig": "^0.9.1",
         "gh-pages": "^6.3.0",
         "npm-run-all2": "^9.0.3",
-        "svgo": "^4.0.1",
         "typescript": "~6.0.0",
         "vite": "^8.2.2",
         "vite-plugin-vue-devtools": "^8.2.1",

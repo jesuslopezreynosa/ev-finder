@@ -43,7 +43,7 @@ const emit = defineEmits<{
                         <tr>
                             <th class="col-spec-header">Specification</th>
                             <th v-for="v in selectedVehicles"
-                                :key="v.modelYear + v.manufacturer + v.model + (v.trim ?? '')"
+                                :key="v.modelYear + String(v.manufacturer) + String(v.model) + String(v.trim ?? '')"
                                 class="col-vehicle-header" :style="{ width: `calc(80% / ${selectedVehicles.length})` }">
                                 <div class="compare-column-header">
                                     <button class="remove-v-btn" @click="emit('toggleCompare', v)"
@@ -64,7 +64,7 @@ const emit = defineEmits<{
                             :class="{ 'diff-highlight': highlightDifferences && evaluateRowDifference(keyLabel) }">
                             <td class="compare-spec-key">{{ keyLabel }}</td>
                             <td v-for="v in selectedVehicles"
-                                :key="v.modelYear + v.manufacturer + v.model + (v.trim ?? '')">
+                                :key="v.modelYear + String(v.manufacturer) + String(v.model) + String(v.trim ?? '')">
                                 {{ getSpecValueByLabel(v, keyLabel) }}
                             </td>
                         </tr>

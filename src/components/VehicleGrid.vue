@@ -7,6 +7,7 @@ import GridFilter, { type FilterState } from './GridFilter.vue';
 import GlyphHandler from './GlyphHandler.vue';
 import VehicleCompareModal from './VehicleCompareModal.vue';
 import VehicleDetailPane from './VehicleDetailPane.vue';
+import { TECHNICAL_CATEGORIES, CATEGORY_MAPPINGS, type CategoryId } from '@/constants/vehicleSpecs';
 
 countries.registerLocale(enLocale);
 
@@ -94,7 +95,7 @@ export interface Vehicle {
     torqueFootPounds: number | null;
     zeroToSixtyTimeSeconds: number | null;
     turningRadiusFeet: number | null;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 const props = defineProps<{
@@ -112,7 +113,7 @@ const getCountryNameFromIsoAlphaThreeCode = (alpha3Code: string): string => {
     return cleaned;
 };
 
-const getChargingPortsArray = (portValue: any): string[] => {
+const getChargingPortsArray = (portValue: unknown): string[] => {
     if (!portValue) return [];
     if (Array.isArray(portValue)) {
         return portValue.flatMap(p => String(p).split(',').map(item => item.trim())).filter(Boolean);
@@ -178,28 +179,10 @@ const currentFilters = ref<FilterState | null>(null);
 const selectedVehicleKey = ref<string | null>(null);
 const detailsAnchorRef = ref<HTMLElement | null>(null);
 
-const technicalCategories = [
-    { id: 'powertrainPerformance', title: 'Powertrain & Performance' },
-    { id: 'energyCharging', title: 'Energy & Charging' },
-    { id: 'dimensions', title: 'Dimensions' },
-    { id: 'cabinConvenience', title: 'Cabin & Convenience' },
-    { id: 'infotainmentConnectivity', title: 'Infotainment & Connectivity' },
-    { id: 'camerasSensors', title: 'Cameras & Sensors' },
-    { id: 'warranties', title: 'Warranties' }
-] as const;
+const technicalCategories = TECHNICAL_CATEGORIES;
+const activeTabId = ref<string>(technicalCategories[0]!.id);
 
-type CategoryId = (typeof technicalCategories)[number]['id'];
-const activeTabId = ref<string>(technicalCategories[0].id);
-
-const categoryMappings: Record<CategoryId, string[]> = {
-    powertrainPerformance: ['hasHeatPump', 'powerHorsepower', 'torqueFootPounds', 'zeroToSixtyTimeSeconds'],
-    energyCharging: ['batteryChemistry', 'batteryNominalVoltage', 'chargingPortTypes', 'dcChargingSpeedKilowatts', 'epaCombinedEfficiencyKilowattHoursPerHundredMiles', 'epaCombinedEfficiencyWattHoursPerMile', 'epaCombinedRangeMiles', 'maxSupportedDcChargingVoltage', 'netBatteryCapacityKilowattHours', 'onboardChargerAmperes', 'plugAndChargeProviders', 'recommendedDailyChargePercent', 'supportsAc277vCharging', 'supportsBatteryPreconditioning', 'supportsPlugAndChargeIso15118', 'supportsSuperchargerAccess', 'supportsVehicleToEverything', 'typicalFullRangeMiles', 'voltageArchitecture'],
-    dimensions: ['frunkCapacityLiters', 'grossWeightPounds', 'groundClearanceInches', 'heightInches', 'lengthInches', 'towingCapacityPounds', 'turningRadiusFeet', 'widthInches'],
-    cabinConvenience: ['hasAdaptiveCruiseControl', 'hasBuiltInDashcam', 'hasGarageDoorOpener', 'hasGlassRoof', 'hasHeatedSeats', 'hasHeatedSteeringWheel', 'hasOnePedalDrive', 'hasPetMode', 'hasPoweredLiftgate', 'hasPoweredSeats', 'hasPoweredSideMirrors', 'hasVentilatedSeats', 'isOnePedalDrivePersistent', 'maxPhoneKeys', 'seatCount', 'standardSeatMaterial', 'supportsMemoryProfilePerSeatAndMirror', 'supportsPhoneAsAKey', 'supportsUserProfiles'],
-    infotainmentConnectivity: ['includedConnectivityFeatures', 'infotainmentOperatingSystem', 'infotainmentScreenResolutionPx', 'infotainmentScreenPpi', 'infotainmentScreenSizeInches', 'navigationProvider', 'optionalConnectivityFeatures', 'optionalSubscriptions', 'requiredFeatureSubscriptions', 'supportsAppleCarPlayAndAndroidAuto', 'supportsAudioDolbyAtmos', 'supportsOverTheAirUpdates', 'audioBrand', 'audioPowerWatts', 'audioSpeakerCount', 'audioSubwooferCount', 'usbPortCount'],
-    camerasSensors: ['driverCameraType', 'exteriorCameraCount', 'exteriorSensors', 'interiorCameraCount'],
-    warranties: ['batteryWarranty', 'corrosionWarranty', 'driveUnitWarranty', 'vehicleWarranty']
-};
+const categoryMappings = CATEGORY_MAPPINGS;
 
 const formatDisplaySpecs = (vehicle: Vehicle) => {
     const skipKeys = ['modelYear', 'manufacturer', 'model', 'trim', 'driveAxle', 'id'];
@@ -217,7 +200,7 @@ const formatDisplaySpecs = (vehicle: Vehicle) => {
                 label = label.replace(regex, acronym.toUpperCase());
             });
 
-            let displayValue = value;
+            let displayValue: unknown = value;
             if (['countryOfAssembly', 'market'].includes(key)) {
                 displayValue = getCountryNameFromIsoAlphaThreeCode(String(value));
             } else if (Array.isArray(value)) {
@@ -400,10 +383,10 @@ const closeCompareModal = (): void => {
     isCompareModalOpen.value = false;
 };
 
-const getSpecValueByLabel = (vehicle: Vehicle, label: string) => {
+const getSpecValueByLabel = (vehicle: Vehicle, label: string): string => {
     const specs = formatDisplaySpecs(vehicle);
     const found = specs.find(s => s.label === label);
-    return found ? found.val : '—';
+    return found ? String(found.val) : '—';
 };
 
 const topCompareBarRef = ref<HTMLElement | null>(null);
@@ -505,12 +488,14 @@ const evaluateRowDifference = (label: string): boolean => {
                                 <h3>{{ vehicle.modelYear }} {{ vehicle.manufacturer }} {{ vehicle.model }}</h3>
                                 <p class="trim-drivetrain-line">
                                     <strong>{{ vehicle.trim }}</strong>
-                                    <span :data-tooltip="vehicle.driveAxle || undefined" class="tooltip-wrapper">
+                                    <span :data-tooltip="String(vehicle.driveAxle || '')" class="tooltip-wrapper">
                                         <span class="pill drivetrain-pill">
-                                            <GlyphHandler :type="vehicle.driveAxle" class="pill-mini-svg" :size="14" />
+                                            <GlyphHandler :type="String(vehicle.driveAxle ?? '')" class="pill-mini-svg"
+                                                :size="14" />
                                         </span>
                                     </span>
-                                    <span :data-tooltip="vehicle.batteryChemistry || undefined" class="tooltip-wrapper">
+                                    <span :data-tooltip="String(vehicle.batteryChemistry || '')"
+                                        class="tooltip-wrapper">
                                         <span class="pill battery-pill">
                                             <svg viewBox="0 0 24 24" class="pill-mini-svg" aria-hidden="true">
                                                 <path
@@ -542,21 +527,21 @@ const evaluateRowDifference = (label: string): boolean => {
                                     </span>
                                     <!-- Plug and Charge -->
                                     <span class="feature-icon-container"
-                                        v-if="vehicle.supportsPlugAndChargeIso15118 && vehicle.supportsPlugAndChargeIso15118.toLowerCase() != 'no'">
+                                        v-if="vehicle.supportsPlugAndChargeIso15118 && String(vehicle.supportsPlugAndChargeIso15118).toLowerCase() != 'no'">
                                         <span data-tooltip="Plug and Charge" class="tooltip-wrapper tooltip-down">
                                             <GlyphHandler type="PLUG-AND-CHARGE" :size="16" class="feature-icon" />
                                         </span>
                                     </span>
                                     <!-- Pet Mode -->
                                     <span class="feature-icon-container"
-                                        v-if="vehicle.hasPetMode && vehicle.hasPetMode.toLowerCase() != 'no'">
+                                        v-if="vehicle.hasPetMode && String(vehicle.hasPetMode).toLowerCase() != 'no'">
                                         <span data-tooltip="Pet Mode" class="tooltip-wrapper tooltip-down">
                                             <GlyphHandler type="PET-MODE" :size="16" class="feature-icon" />
                                         </span>
                                     </span>
                                     <!-- Phone Key -->
                                     <span class="feature-icon-container"
-                                        v-if="vehicle.supportsPhoneAsAKey && vehicle.supportsPhoneAsAKey.toLowerCase() != 'no'">
+                                        v-if="vehicle.supportsPhoneAsAKey && String(vehicle.supportsPhoneAsAKey).toLowerCase() != 'no'">
                                         <span data-tooltip="Phone Key" class="tooltip-wrapper tooltip-down">
                                             <GlyphHandler type="PHONE-KEY" :size="16" class="feature-icon" />
                                         </span>
