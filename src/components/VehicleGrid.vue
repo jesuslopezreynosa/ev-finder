@@ -161,16 +161,16 @@ const dataBounds = computed(() => {
 
     return {
         modelYear: {
-            min: modelYears.length ? Math.min(...modelYears) : 2018,
-            max: modelYears.length ? Math.max(...modelYears) : ((new Date()).getFullYear() + 1)
+            min: (modelYears && modelYears.length) ? Math.min(...modelYears) : 2018,
+            max: (modelYears && modelYears.length) ? Math.max(...modelYears) : ((new Date()).getFullYear() + 1)
         },
         epaCombinedRangeMiles: {
-            min: epaRanges.length ? Math.min(...epaRanges) : 0,
-            max: epaRanges.length ? Math.max(...epaRanges) : 500
+            min: (epaRanges && epaRanges.length) ? Math.min(...epaRanges) : 0,
+            max: (epaRanges && epaRanges.length) ? Math.max(...epaRanges) : 500
         },
         dcChargingSpeedKilowatts: {
-            min: dcChargingSpeeds.length ? Math.min(...dcChargingSpeeds) : 0,
-            max: dcChargingSpeeds.length ? Math.max(...dcChargingSpeeds) : 350
+            min: (dcChargingSpeeds && dcChargingSpeeds.length) ? Math.min(...dcChargingSpeeds) : 0,
+            max: (dcChargingSpeeds && dcChargingSpeeds.length) ? Math.max(...dcChargingSpeeds) : 350
         }
     };
 });
