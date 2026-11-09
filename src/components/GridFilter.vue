@@ -110,6 +110,7 @@ function hideTooltip() {
 
 const activePopoverKey = ref<string | null>(null);
 const popoverSearchQuery = ref<string>('');
+const osActiveTab = ref<'family' | 'infotainment'>('family');
 
 const yearMin = ref<number>(props.bounds?.modelYear?.min ?? 2018);
 const rangeMin = ref<number>(props.bounds?.epaCombinedRangeMiles?.min ?? 0);
@@ -194,6 +195,75 @@ const stringFilterGroups = computed((): StringGroupConfig[] => {
         { title: 'Audio', key: 'audioBrand', choices: normalizeListValues(opts.audioBrand) }
     ];
 });
+
+// Dynamically generate OS Family Map from dataset options
+const dynamicOsFamilyMap = computed(() => {
+    const map: Record<string, string[]> = {};
+    const osGroup = stringFilterGroups.value.find(g => g.key === 'infotainmentOperatingSystem');
+    const choices = osGroup ? osGroup.choices : [];
+
+    choices.forEach(choice => {
+        const families: string[] = [];
+
+        // Explicit override for Google built-in as requested
+        if (choice === 'Google built-in') {
+            families.push('Android Automotive');
+        }
+
+        const lower = choice.toLowerCase();
+        if (lower.includes('android automotive') || choice === 'Android Automotive') {
+            families.push('Android Automotive');
+        } else if (lower.includes('android')) {
+            families.push('Android Automotive');
+        } else if (lower.includes('linux')) {
+            families.push('Linux');
+        } else if (lower.includes('qnx')) {
+            families.push('QNX');
+        } else {
+            const match = choice.match(/\(([^)]+)\)/);
+            const extractedFamily = match?.[1]?.trim();
+            if (extractedFamily) {
+                families.push(extractedFamily);
+            } else {
+                families.push(choice);
+            }
+        }
+
+        families.forEach(family => {
+            if (!map[family]) {
+                map[family] = [];
+            }
+            if (!map[family].includes(choice)) {
+                map[family].push(choice);
+            }
+        });
+    });
+
+    return map;
+});
+
+const isFamilySelected = (familyName: string) => {
+    const choices = dynamicOsFamilyMap.value[familyName] || [];
+    if (choices.length === 0) return false;
+    return choices.every(c => selectedFilters.value.infotainmentOperatingSystem.includes(c));
+};
+
+const toggleFamilySelection = (familyName: string) => {
+    const choices = dynamicOsFamilyMap.value[familyName] || [];
+    const currentlySelected = isFamilySelected(familyName);
+    
+    let currentList = [...selectedFilters.value.infotainmentOperatingSystem];
+    if (currentlySelected) {
+        currentList = currentList.filter(item => !choices.includes(item));
+    } else {
+        choices.forEach(c => {
+            if (!currentList.includes(c)) {
+                currentList.push(c);
+            }
+        });
+    }
+    selectedFilters.value.infotainmentOperatingSystem = currentList;
+};
 
 const activeChipsList = computed(() => {
     const chips: { categoryKey: string; displayValue: string; }[] = [];
@@ -353,6 +423,15 @@ watch(speedMin, () => { syncAndEmit(); });
                     </svg>
                 </button>
                 <div v-if="activePopoverKey === group.key" class="dropdown-popover-box" role="dialog">
+                    
+                    <!-- OS Specific Tabbed Selector -->
+                    <template v-if="group.key === 'infotainmentOperatingSystem'">
+                        <div class="segmented-control os-tab-control">
+                            <button :class="{ active: osActiveTab === 'family' }" @click="osActiveTab = 'family'" type="button">OS Family</button>
+                            <button :class="{ active: osActiveTab === 'infotainment' }" @click="osActiveTab = 'infotainment'" type="button">Infotainment OS</button>
+                        </div>
+                    </template>
+
                     <div v-if="SEARCHABLE_CATEGORIES.has(group.key)" class="popover-search-container" @click.stop>
                         <svg viewBox="0 0 24 24" class="popover-search-icon" aria-hidden="true">
                             <path
@@ -388,7 +467,21 @@ watch(speedMin, () => { syncAndEmit(); });
                         </div>
                     </div>
 
-                    <div class="popover-choices-list"
+                    <!-- OS Family View (Dynamically Generated) -->
+                    <div v-if="group.key === 'infotainmentOperatingSystem' && osActiveTab === 'family'" class="popover-choices-list">
+                        <template v-for="(familyItems, familyName) in dynamicOsFamilyMap" :key="familyName">
+                            <label
+                                v-if="!popoverSearchQuery.trim() || familyName.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim()) || familyItems.some(i => i.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim()))"
+                                class="popover-checkbox-item">
+                                <input type="checkbox" :checked="isFamilySelected(familyName)" @change="toggleFamilySelection(familyName)"
+                                    class="styled-checkbox" />
+                                <span class="checkbox-custom-label">{{ familyName }}</span>
+                            </label>
+                        </template>
+                    </div>
+
+                    <!-- Standard / Infotainment OS View -->
+                    <div v-else class="popover-choices-list"
                         :class="{ 'is-charge-port-grid': group.key === 'chargingPortTypes' }">
                         <label
                             v-for="option in (SEARCHABLE_CATEGORIES.has(group.key) && popoverSearchQuery.trim() ? group.choices.filter(c => c.toLowerCase().includes(popoverSearchQuery.toLowerCase().trim())) : group.choices)"
@@ -719,6 +812,10 @@ html.dark .dropdown-trigger-btn.has-active-selections {
 html.dark .dropdown-popover-box {
     background: rgba(28, 37, 65, 0.98);
     border-color: rgba(51, 65, 85, 0.9);
+}
+
+.os-tab-control {
+    margin-bottom: 4px;
 }
 
 .popover-search-container {

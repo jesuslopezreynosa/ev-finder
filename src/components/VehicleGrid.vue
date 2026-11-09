@@ -525,9 +525,8 @@ const evaluateRowDifference = (label: string): boolean => {
                                             </span>
                                         </span>
                                     </span>
-                                    <!-- Plug and Charge -->
                                     <span class="feature-icon-container"
-                                        v-if="vehicle.supportsPlugAndChargeIso15118 && String(vehicle.supportsPlugAndChargeIso15118).toLowerCase() != 'no'">
+                                        v-if="vehicle.supportsPlugAndChargeIso15118 && !['no', 'tesla'].includes(String(vehicle.supportsPlugAndChargeIso15118).toLowerCase())">
                                         <span data-tooltip="Plug and Charge" class="tooltip-wrapper tooltip-down">
                                             <GlyphHandler type="PLUG-AND-CHARGE" :size="16" class="feature-icon" />
                                         </span>
